@@ -1,0 +1,38 @@
+default_context:
+  institution: "Washington State University (WSU)"
+  department: "Mathematics"
+  campus: "Pullman"
+  campus_state: "WA"
+  course_number: "583"
+  course_section: "01"
+  year: "2023"
+  term: "Spring"
+  class_time: "MW, 12:10pm - 2:00pm"
+  class_room: "[Webster 941](https://sah-archipedia.org/buildings/WA-01-075-0008-13)"
+  wsu_class_number: "04768"
+  zoom_number: "505 115 089"
+  canvas_url: ""
+  perusall_url: ""
+  author: "Michael McNeil Forbes"
+  author_email: "m.forbes+{{cookiecutter.course_number}}@wsu.edu"
+  office: "Webster 947F"
+  phone: "(509) 720-8095"
+  office_hours: "TBD"
+  personnel:
+    instructors: [
+      'Kevin R. Vixie [`kvixie+{{cookiecutter.course_number}}@wsu.edu`](mailto:kvixie+{{cookiecutter.course_number}}@wsu.edu)',
+  'Michael McNeil Forbes [`m.forbes+{{cookiecutter.course_number}}@wsu.edu`](mailto:m.forbes+{{cookiecutter.course_number}}@wsu.edu)']
+    assistants: ["TBA"]
+  title: "iSciMath - Learning from Images and Signals: Theory and Computation"
+  short_title: "Learning from Signals"
+  gitlab_url: "https://gitlab.com/wsu-courses/iscimath-583-learning-from-images-and-signals"
+  github_url: "https://github.com/WSU-Physics-Courses/iscimath-583-learning-from-images-and-signals"
+  resources_url: "https://gitlab.com/wsu-courses/iscimath-583-learning-from-images-and-signals_resources"
+  rtd: "iscimath-583-learning-from-signals"
+  use_genbadge: "yes"
+  use_manim: "no"
+  use_latex: "yes"
+  cocalc_project: "5111388d-0811-49c4-9cb9-223049d52da7"
+  cocalc_course_project: "c31d20a3-b0af-4bf7-a951-aa93a64395f6"
+  nsf_grant: "2012190"
+
