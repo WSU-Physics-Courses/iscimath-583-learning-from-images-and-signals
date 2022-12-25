@@ -1,0 +1,39 @@
+image: continuumio/miniconda3:latest
+
+cache:
+  paths:
+    - envs
+
+before_script:
+  # - conda update conda  # Not strictly needed
+  - conda install -qy anaconda-project
+  - anaconda-project prepare
+  
+test:
+  script:
+    - anaconda-project run test || true   # Make sure job never fails so we get artifacts
+  artifacts:
+    when: always
+    paths:
+      - _artifacts
+    reports:
+      cobertura: _artifacts/coverage.xml
+  coverage: '/Total coverage: (\d+\..*\%)$/'
+
+#
+test-0:
+  script:
+    - anaconda-project run test-0 || true
+  artifacts:
+    when: always
+    paths:
+      - _artifacts
+
+test-1:
+  script:
+    - anaconda-project run test-1 || true
+  artifacts:
+    when: always
+    paths:
+      - _artifacts
+#

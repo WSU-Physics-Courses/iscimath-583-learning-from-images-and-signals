@@ -1,0 +1,11 @@
+[run]
+source=
+   math_583
+omit=
+   */tests/*
+
+[xml]
+output = _artifacts/coverage.xml
+
+[html]
+directory = _artifacts/htmlcov

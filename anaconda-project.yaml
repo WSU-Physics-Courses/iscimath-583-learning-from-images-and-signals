@@ -1,0 +1,170 @@
+# This is an Anaconda project file.
+#
+# Here you can describe your project and how to run it.
+# Use `anaconda-project run` to run the project.
+# The file is in YAML format, please see http://www.yaml.org/start.html for more.
+#
+
+#
+# Set the 'name' key to name your project
+#
+name: math-583
+
+#
+# Set the 'icon' key to give your project an icon
+#
+icon:
+
+#
+# Set a one-sentence-or-so 'description' key with project details
+#
+description: 'WSU Course Mathematics 583: iSciMath - Learning from Images and Signals: Theory and Computation taught Spring 2023'
+
+#
+# In the commands section, list your runnable scripts, notebooks, and other code.
+# Use `anaconda-project add-command` to add commands.
+#
+commands:
+  shell:
+    unix: bash --init-file .init-file.bash
+    env_spec: math-583
+
+  export:
+    unix: conda env export
+    env_spec: math-583
+
+  # Needs to be explicitly called until we can run scripts on prepare
+  # https://github.com/Anaconda-Platform/anaconda-project/issues/239
+  init:
+    unix: python3 -m ipykernel install --user --name "math-583" --display-name
+      "Python 3 (math-583)"
+    env_spec: math-583
+
+  clean:
+    unix: jupyter kernelspec uninstall -f "math-583"
+    env_spec: math-583
+
+  test:
+    unix: |
+      pytest
+      genbadge tests -i _artifacts/junit.xml -o _artifacts/test-badge.svg
+      genbadge coverage -i _artifacts/coverage.xml -o _artifacts/coverage-badge.svg
+    env_spec: math-583
+  test-0:
+    unix: |
+      pytest -k test_official_assignment_0 --no-cov
+      genbadge tests -i _artifacts/junit.xml -o _artifacts/test-0-badge.svg
+    env_spec: math-583
+  
+#
+# In the variables section, list any environment variables your code depends on.
+# Use `anaconda-project add-variable` to add variables.
+#
+variables:
+  CONDA_EXE: mamba
+
+#
+# In the services section, list any services that should be
+# available before your code runs.
+# Use `anaconda-project add-service` to add services.
+#
+services: {}
+
+#
+# In the downloads section, list any URLs to download to local files
+# before your code runs.
+# Use `anaconda-project add-download` to add downloads.
+#
+downloads: {}
+
+#
+# In the packages section, list any packages that must be installed
+# before your code runs.
+# Use `anaconda-project add-packages` to add packages.
+#
+# Trick: Call this "dependencies:" so this file can be used as an environment.yaml file:
+#
+#     conda env --file anaconda-project.yaml
+#
+# Requires anaconda-project >= 0.8.4
+#
+# See https://github.com/Anaconda-Platform/anaconda-project/issues/265
+
+# packages:
+dependencies:
+  - python=3.9
+  - anaconda-project>=0.10.1
+
+  # To deal with error in XXXX setup command: use_2to3 is invalid when false
+  # https://github.com/pypa/setuptools/issues/2775
+  # See ClassLog.md
+  - setuptools<58.0.2|>59
+
+  # Core
+  - scipy
+  - sympy
+  #- conda-forge::jupyter_console
+
+  # Plotting and visualization tools
+  - matplotlib
+
+  # Testing
+  - pytest-cov
+  - pytest-flake8
+  - pytest-html
+  - pytest-xdist
+  - black
+
+  # Documentation
+  - sphinx
+  - jupytext
+  - pandoc
+  - notebook
+  - conda-forge::jupyter_nbextensions_configurator
+  #- conda-forge::myst-nb
+  - conda-forge::myst-parser    
+  - conda-forge::sphinx-panels
+  - conda-forge::sphinx-book-theme>=0.3.2
+  - conda-forge::sphinx-autobuild
+  - conda-forge::sphinx-comments # Hypothes.is comments and annotations    
+  
+  # Pip-only dependencies
+  - pip
+  - pip:
+    - sphinx-togglebutton
+    - sphinxcontrib-zopeext
+    - sphinxcontrib-bibtex>=2.4.0
+    # https://github.com/executablebooks/sphinx-jupyterbook-latex/issues/97
+    - sphinx-jupyterbook-latex[myst-nb]    
+    - sphobjinv  # Helps looking up intersphinx references
+    - mmf-setup
+    - ruamel-yaml
+    - genbadge[all]
+channels:
+  - defaults
+
+#
+# In the platforms section, list platforms the project should work on
+# Examples: "linux-64", "osx-64", "win-64"
+# Use `anaconda-project add-platforms` to add platforms.
+#
+platforms:
+- linux-64
+- osx-64
+- win-64
+
+#
+# You can define multiple, named environment specs.
+# Each inherits any global packages or channels,
+# but can have its own unique ones also.
+# Use `anaconda-project add-env-spec` to add environment specs.
+#
+env_specs:
+  math-583:
+    description: Default course environment spec.
+    channels: []
+
+# Silence warnings about about notebooks without run commands
+# See https://github.com/Anaconda-Platform/anaconda-project/issues/263#issuecomment-870004641
+skip_imports:
+  notebooks: true
