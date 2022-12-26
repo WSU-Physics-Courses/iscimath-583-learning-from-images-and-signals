@@ -121,7 +121,7 @@ dependencies:
   - pandoc
   - notebook
   - conda-forge::jupyter_nbextensions_configurator
-  #- conda-forge::myst-nb
+  - conda-forge::myst-nb
   - conda-forge::myst-parser    
   - conda-forge::sphinx-panels
   - conda-forge::sphinx-book-theme>=0.3.2
@@ -131,6 +131,7 @@ dependencies:
   # Pip-only dependencies
   - pip
   - pip:
+    - sphinx-design
     - sphinx-togglebutton
     - sphinxcontrib-zopeext
     - sphinxcontrib-bibtex>=2.4.0
