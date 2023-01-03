@@ -102,6 +102,7 @@ dependencies:
 
   # Core
   - scipy
+  - scikit-image
   - sympy
   #- conda-forge::jupyter_console
 
@@ -114,6 +115,7 @@ dependencies:
   - pytest-html
   - pytest-xdist
   - black
+  - yapf
 
   # Documentation
   - sphinx

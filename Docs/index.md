@@ -38,9 +38,11 @@ maxdepth: 2
 caption: "Contents:"
 titlesonly:
 hidden:
+glob:
 ---
 Syllabus
 Assignments
+Notes/*
 
 References
 ```
