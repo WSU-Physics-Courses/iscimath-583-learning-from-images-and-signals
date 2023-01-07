@@ -5,15 +5,15 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.13.6
+    jupytext_version: 1.14.4
 kernelspec:
   display_name: Python 3 (math-583)
   language: python
   name: math-583
 ---
 
-```{code-cell} ipython3
-:hide-cell:
+```{code-cell}
+:hide-cell: null
 
 import mmf_setup;mmf_setup.nbinit()
 import logging;logging.getLogger('matplotlib').setLevel(logging.CRITICAL)
@@ -90,7 +90,7 @@ of the document contains information about the kernel that should be used etc.  
 are parsed using [MyST-NB] and the output of cells will be displayed.  For example, here
 is a plot demonstrating [Liouville's Theorem].
 
-```{code-cell} ipython3
+```{code-cell}
 :tags: [hide-input, full-width]
 
 plt.rcParams['figure.dpi'] = 300

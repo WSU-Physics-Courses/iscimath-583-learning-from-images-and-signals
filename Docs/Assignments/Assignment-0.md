@@ -5,19 +5,19 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.13.6
+    jupytext_version: 1.14.4
 kernelspec:
   display_name: Python 3 (math-583)
   language: python
   name: math-583
 ---
 
-```{code-cell} ipython3
+```{code-cell}
 import sys
 print(sys.executable)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 :cell_style: center
 :hide_input: false
 
@@ -50,7 +50,7 @@ $$
   \sum_{n=1}^{M} n = \frac{M(M+1)}{2}
 $$
 
-```{code-cell} ipython3
+```{code-cell}
 
 ```
 
@@ -60,7 +60,7 @@ $$
 
 where $\zeta(s)$ is the [Riemann zeta function](https://en.wikipedia.org/wiki/Riemann_zeta_function).
 
-```{code-cell} ipython3
+```{code-cell}
 
 ```
 
@@ -74,7 +74,7 @@ $$
   \int_0^1 x^p \d{x} = \frac{1}{p+1}
 $$
 
-```{code-cell} ipython3
+```{code-cell}
 
 ```
 
@@ -84,7 +84,7 @@ $$
   \int_{-\infty}^{\infty} e^{-x^2} \d{x} = \sqrt{\pi}
 $$
 
-```{code-cell} ipython3
+```{code-cell}
 
 ```
 
@@ -94,7 +94,7 @@ $$
   \int_{-\infty}^{\infty} e^{-x^2}\sin\frac{1}{x^2}\d{x} = \sqrt{\pi}e^{-\sqrt{2}}\sin(\sqrt{2})
 $$
 
-```{code-cell} ipython3
+```{code-cell}
 
 ```
 
@@ -114,7 +114,7 @@ $$
 $$
 where $G_{mn}^{pq}\bigl(\begin{smallmatrix}\vect{a}_p\\ \vect{b}_q\end{smallmatrix}\big|z\bigr)$ is the [Meijer G-function](https://en.wikipedia.org/wiki/Meijer_G-function).
 
-```{code-cell} ipython3
+```{code-cell}
 
 ```
 
@@ -137,7 +137,7 @@ $$
 
 for $\epsilon \in \{1, 10^{-10}, 10^{-20}\}$.
 
-```{code-cell} ipython3
+```{code-cell}
 
 ```
 
@@ -146,7 +146,7 @@ $$
   x = \{1\pm\I, -1\pm 2\I\}
 $$
 
-```{code-cell} ipython3
+```{code-cell}
 
 ```
 
@@ -184,7 +184,7 @@ $$
 
 so we expect
 
-```{code-cell} ipython3
+```{code-cell}
 from math_583.assignment_0 import quadratic_equation
 np.allclose(quadratic_equation(a=1, b=-3, c=2), [1, 2])
 ```
@@ -197,7 +197,7 @@ Note: if you attempt to blindly use the quadratic formula as is done in the defa
 
 The goal should be for every function to return an answer that has a relative error comparable to the **machine precision** of the computer: sometimes called $\epsilon = $`eps`.  This is not always possible if the problem is ill-conditioned.
 
-```{code-cell} ipython3
+```{code-cell}
 for epsilon in [1, 1e-10, 1e-20]:
     roots = quadratic_equation(a=1, b=-(1+epsilon), c=epsilon)
     exact_roots = [1, epsilon]
@@ -227,11 +227,11 @@ $$
 
 The actual values are a little different as we see below (e.g. `tiny`$=2^{-1022}=2.225\times 10^{-308}$) because of some subtleties in the actual implementation of the IEEE standard.
 
-```{code-cell} ipython3
+```{code-cell}
 import numpy as np
 print(np.finfo(float))
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 
 ```
