@@ -12,7 +12,7 @@ kernelspec:
   name: math-583
 ---
 
-```{code-cell}
+```{code-cell} ipython3
 :tags: [hide-cell]
 
 import mmf_setup;mmf_setup.nbinit()
@@ -59,13 +59,26 @@ index so that the images $\ket{I_n}$ can be represented as vectors in an appropr
 high-dimensional space.
 
 A simple strategy is to note that
+\begin{align*}
+  \ket{I_n} &= \ket{b} + \ket{a\cos(\phi + \theta_n)}+ \ket{\eta_n} \\
+            &= \ket{b} + \Bigl(
+               \ket{a\cos\phi}\cos\theta_n - \ket{a\sin\phi}\sin\theta_n
+           \Bigr) + \ket{\eta_n}.
+\end{align*}
+::::{admonition} Notation: $\ket{I_n} \equiv I_n(x)$.
+:class: dropdown
+
+**To Do**: Explain this notation.
+\begin{align*}
+  I_n(x) &= b(x) + a(x)\cos\bigl(\phi(x) + \theta_n\bigr)+ \eta_n \\
+         &= b(x) + a(x)\Bigr(\cos\bigl(\phi(x)\bigr)\cos(\theta_n) - a(x)\sin\bigl(\phi(x)\bigr)\sin(\theta_n)\Bigr) + \eta_n(x),\\
+  \ket{I_n} &= \ket{b} + \ket{a\cos(\phi + \theta_n)}+ \ket{\eta_n} \\
+           &= \ket{b} + \Bigl(\ket{a\cos\phi}\cos\theta_n - \ket{a\sin\phi}\sin\theta_n\Bigr) + \ket{\eta_n}.
+\end{align*}
+::::
+Thus, the image lives in a 3-dimensional subspace plus noise:
 \begin{gather*}
-  \ket{I_n} = \ket{b} + \Bigl(\ket{a\cos\phi}\cos(\theta_n) - \ket{a\sin\phi}\sin(\theta_n)\Bigr) + \ket{\eta_n}.
-\end{gather*}
-Thus, up to the noise $\eta_n$, the image lives in a 3-dimensional subspace spanned by
-the basis vectors
-\begin{gather*}
-  \ket{I_n} \in \span\bigl\{\ket{b}, \ket{a\cos\phi}, \ket{a\sin\phi}\bigr\}.
+  \ket{I_n} \in \span\bigl\{\ket{b}, \ket{a\cos\phi}, \ket{a\sin\phi}\bigr\} + \text{noise}.
 \end{gather*}
 
 :::{margin}

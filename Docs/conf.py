@@ -60,9 +60,9 @@ extensions = [
     # "jupyter_book",
     # "sphinx_thebe",
     # "sphinx_external_toc",
-# 
+    #
     "sphinx_jupyterbook_latex",
-# 
+    #
     "sphinx_comments",  # Hypothes.is comments and annotations
     "sphinx_design",
     "sphinx_togglebutton",
@@ -134,7 +134,7 @@ html_theme = "sphinx_book_theme"  # Theme for JupyterBook
 html_logo = "_static/wsu-logo.svg"
 
 html_theme_options = {
-#
+    #
 }
 
 # Override version number in title... not relevant for docs.
@@ -220,6 +220,7 @@ class SolutionAdmonition(BaseAdmonition):
         self.state.nested_parse(self.content, self.content_offset, admonition_node)
         return [admonition_node]
 
+
 math_defs_filename = "_static/math_defs.tex"
 
 html_context = {
@@ -285,6 +286,7 @@ def my_init(app):
         subprocess.check_call(["anaconda-project", "run", "init"])
 
     mathjax_offline = False
+    # mathjax_offline = True
     if mathjax_offline:
         # For this to work, you need to put mathjax js files in Docs/_static/mathjax
         # Docs/_static/
@@ -328,6 +330,5 @@ def setup(app):
     app.add_config_value("on_rtd", on_rtd, "env")
     app.add_config_value("on_cocalc", on_cocalc, "env")
     my_init(app)
-     # app.add_directive("solution", SolutionAdmonition)
+    # app.add_directive("solution", SolutionAdmonition)
     app.add_directive("solution", Toggle)
-    

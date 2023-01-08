@@ -9,35 +9,32 @@ jupytext:
 kernelspec:
   display_name: Python 3 (math-583)
   language: python
-  metadata:
-    debugger: true
   name: math-583
-  resource_dir: /home/user/.local/share/jupyter/kernels/math-583
 ---
 
 ```{code-cell} ipython3
+:tags: [hide-cell]
+
 %matplotlib inline
 import numpy as np, matplotlib.pyplot as plt
-```
-
-```{code-cell} ipython3
 import mmf_setup; mmf_setup.nbinit()
+import logging
+logging.getLogger('PIL').setLevel(logging.ERROR)  # Suppress PIL messages
+import PIL
 ```
 
-# The Problem
+# Denoising
 
-+++
+## The Problem
 
-# Walkthrough
+## Walkthrough
 
-+++
-
-## Loading Images
+### Loading Images
 
 ```{code-cell} ipython3
 # See what images are available
 
-!ls images
+!ls images/
 ```
 
 Use the [Python Imaging Library](https://python-pillow.org/) (PIL) to load images:
@@ -50,7 +47,7 @@ im = Image.open("images/The-original-cameraman-image.png")
 im  # or display(im), but this happens by default for the last line
 ```
 
-## Adding Noise
+### Adding Noise
 
 ```{code-cell} ipython3
 # First, see what the data looks like as an array.
@@ -78,7 +75,7 @@ u_noise = u + sigma * rng.normal(size=u.shape)
 plt.imshow(u_noise, vmin=0, vmax=1, cmap="gray")
 ```
 
-## Removing Noise
+### Removing Noise
 
 ```{code-cell} ipython3
 def imshow(u):
@@ -108,20 +105,20 @@ from ipywidgets import interact
 
 d2u = laplacian(u_noise)
 
-@interact(p=(0, 50, 1))
+#@interact(p=(0, 50, 1))
 def go(p=10):
     vmin, vmax = np.percentile(d2u, [p, 100-p])
     plt.imshow(d2u, vmin=vmin, vmax=vmax, cmap='gray')
 ```
 
-We will minimze
+We will minimize
 
 \begin{gather}
   E[u] = \int\abs{\vect{\nabla} u}^2 + \lambda \int \abs{u - d}^2,\\
-  dE(u) = \pdiff{E}{u} = 2\Bigl(-\nabla^2u + \lambda (u-d)\Bigr) = 0.
+  dE(u) = \pdiff{E}{u} = 2\Bigl(-\nabla^2u + \lambda (u-d)\Bigr) = 0,
 \end{gather}
-
-We can do this with a direct gradient descent:
+where $d\equiv$`u_noise` is the **data**, or the noisy image. We can do this with a
+direct gradient descent:
 
 \begin{gather}
   \diff{u}{t} = -\beta\; dE(u)
@@ -209,18 +206,56 @@ ax = axs[2]
 ax.imshow(u_exact, vmin=0, vmax=1, cmap="gray")
 ```
 
-# Exploration
+## Exploration
 
-+++
+Here we explore some properties of denoising using the tools in `denoise.py`, which
+packages code similar to that use above into classes and functions for easy reuse,
+testing, and exploration.
 
-# Source Code
-
-+++
-
-The following cells contain the source code for modules used in this document.  They need to be executed once to generate the source files, but afterwards can just be imported.  They use the [`%%file`]() magic which writes the contents to file.
+We start with an image and various levels of noise:
 
 ```{code-cell} ipython3
-%%writefile denoise.py
+%matplotlib inline
+import mmf_setup;mmf_setup.set_path()
+import numpy as np, matplotlib.pyplot as plt
+import PIL
+from importlib import reload
+import denoise;reload(denoise)
+
+im = denoise.Image()
+sigmas = np.linspace(0, 1, 6)
+fig, axs = plt.subplots(1, len(sigmas), figsize=(len(sigmas)*2, 2))
+for sigma, ax in zip(sigmas, axs):
+    plt.sca(ax)
+    im.imshow(im.get_data(sigma=sigma))
+    ax.set(title=f"{sigma=:.2g}")
+```
+
+```{code-cell} ipython3
+import denoise;reload(denoise)
+im = denoise.Image()
+d = denoise.Denoise(image=im, sigma=0.4, lam=1000.0)
+u = d.u_exact
+y = d.pack(u)
+
+dy = im.rng.normal(size=y.shape)
+dy /= np.linalg.norm(dy)
+```
+
+```{code-cell} ipython3
+h = 0.0001
+(d._f(y+h*dy) - d._f(y-h*dy))/2/h, d._df(y).dot(dy)
+#d._f(y), d._df(y)
+```
+
+## Source Code
+
+The following cells contain the source code for modules used in this document.  They
+need to be executed once to generate the source files, but afterwards can just be
+imported.  They use the [`%%file`]() magic which writes the contents to file.
+
+```{code-cell} ipython3
+#%%writefile denoise.py
 from pathlib import Path
 
 import numpy as np
@@ -269,6 +304,20 @@ class Image(Base):
 import denoise
 
 im = denoise.Image()
+```
+
+```{code-cell} ipython3
+import scipy.ndimage
+u = im.get_data(sigma=0)
+%timeit d2u1 = scipy.ndimage.laplace(u, mode='reflect')
+%timeit d2u2 = scipy.ndimage.laplace(u, mode='wrap')
+#plt.imshow(abs(d2u1-d2u2))
+#plt.colorbar()
+%timeit np.fft.ifftn(np.fft.fft2(u))
+```
+
+```{code-cell} ipython3
+scipy.ndimage.gaussian_laplace??
 ```
 
 ```{code-cell} ipython3

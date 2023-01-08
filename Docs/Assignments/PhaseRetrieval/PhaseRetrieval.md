@@ -12,7 +12,7 @@ kernelspec:
   name: math-583
 ---
 
-```{code-cell}
+```{code-cell} ipython3
 :tags: [hide-cell]
 
 import mmf_setup; mmf_setup.nbinit()
@@ -63,7 +63,7 @@ $2\pi$.  To reconstruct the smooth $\phi(x)$, one can use the
 As encouragement, a simple solution with these conditions can be implemented in less
 than 20 lines, which works reasonably well even with moderate noise $\eta_n$.
 
-```{code-cell}
+```{code-cell} ipython3
 %matplotlib inline
 import numpy as np, matplotlib.pyplot as plt
 
@@ -97,7 +97,7 @@ ax.pcolormesh(x, thetas, I.T, shading="auto")
 ax.set(ylabel=r"θ", xlabel="x");
 ```
 
-```{code-cell}
+```{code-cell} ipython3
 # Try to find a solution!
 
 plt.plot(x, get_residual(phi+1))
@@ -105,7 +105,7 @@ plt.plot(x, get_residual(phi+1))
 
 # A Simple Solution
 
-```{code-cell}
+```{code-cell} ipython3
 from skimage.restoration import unwrap_phase
 
 Np = 10  # Number of images
@@ -156,7 +156,86 @@ plt.plot(x, phase)
 
 We now re-code the same problem, but a little more modular so that we can explore the sensitivity to errors etc.
 
-```{code-cell}
+````{code-cell} ipython3
+class Base:
+    """Base class to set attributes."""
+
+First we explore the sensitivity to noise:
+
+```{code-cell} ipython3
+%matplotlib inline
+import numpy as np, matplotlib.pyplot as plt
+from phase_retrieval import Problem, RetrievePhase 
+
+p = Problem()
+````
+
+First we explore the sensitivity to noise:
+
+```{code-cell} ipython3
+r = RetrievePhase(Np=10)
+
+etas = 10**np.linspace(-12, -1, 500)
+
+phases_and_ratios = [r.get_phase(problem=p, eta=_eta) for _eta in etas]
+
+# A little trick from python: phases is a list of (phase, ratio) pairs.
+# The python zip function allows use to reorganize this as a list of phases
+# and a list ratios.  We then apply np.asarray to make them into arrays
+phases, ratios = map(np.asarray, zip(*phases_and_ratios))
+
+fig, ax = plt.subplots(figsize=(6,3))
+ax.loglog(etas, abs(phases - p.phi).max(axis=1))
+ax.set(xlabel="η", ylabel="Max abs. err. in φ")
+ax1 = ax.twinx()
+ax1.loglog(etas, ratios, 'C1')
+ax1.set(ylabel="$λ_2/λ_1$");
+```
+
+We see that the absolute error in the phase retrieval depends linearly on the size of the error.  (Formally, we need to check the exponent, but it is 1).  Second, we see that the ratio $\lambda_2/\lambda_1$ provides a good estimate of the error, with $\lambda_2 < 0.04\lambda_1$ for about percent level accuracy.
+
+These values are probably quite specific to this problem.  With work, one can probably understand exactly how these errors behave.
+
++++
+
+Now, for a fixed level of noise, can we improve the results by taking more images?
+
+```{code-cell} ipython3
+2**np.arange(2, 7)
+```
+
+```{code-cell} ipython3
+import tqdm
+Nps = np.array([3] + (2**np.arange(2, 7)).tolist())
+Nsamples = 100
+eta = 1e-4
+errs = []
+stds = []
+for Np in tqdm.tqdm(Nps):
+    r = RetrievePhase(Np=Np)
+    errs_ = [abs(r.get_phase(problem=p, eta=eta)[0] -  p.phi).max()
+             for _sample in range(Nsamples)]
+    errs.append(np.mean(errs_))
+    stds.append(np.std(errs_))
+    
+```
+
+```{code-cell} ipython3
+errs, stds = map(np.asarray, (errs, stds))
+fig, ax = plt.subplots(figsize=(6,3))
+ax.loglog(1/Nps, errs)
+ax.errorbar(1/Nps, errs, stds)
+ax.set(xlabel="$N_p$", ylabel="Average max abs. err. in φ");
+ax.set_xticks(1/Nps)
+ax.set_xticklabels(Nps);
+```
+
+```{code-cell} ipython3
+%%file phase_retrieval.py
+import numpy as np
+from skimage.restoration import unwrap_phase
+
+
 class Base:
     """Base class to set attributes."""
 
@@ -208,66 +287,4 @@ class RetrievePhase(Base):
         
         phase += problem.phi[0] - phase[0]  # Assume we know this!
         return phase, λb[2]/λb[1]
-
-p = Problem()
-```
-
-First we explore the sensitivity to noise:
-
-```{code-cell}
-r = RetrievePhase(Np=10)
-
-etas = 10**np.linspace(-12, -1, 500)
-
-phases_and_ratios = [r.get_phase(problem=p, eta=_eta) for _eta in etas]
-
-# A little trick from python: phases is a list of (phase, ratio) pairs.
-# The python zip function allows use to reorganize this as a list of phases
-# and a list ratios.  We then apply np.asarray to make them into arrays
-phases, ratios = map(np.asarray, zip(*phases_and_ratios))
-
-fig, ax = plt.subplots(figsize=(6,3))
-ax.loglog(etas, abs(phases - p.phi).max(axis=1))
-ax.set(xlabel="η", ylabel="Max abs. err. in φ")
-ax1 = ax.twinx()
-ax1.loglog(etas, ratios, 'C1')
-ax1.set(ylabel="$λ_2/λ_1$");
-```
-
-We see that the absolute error in the phase retrieval depends linearly on the size of the error.  (Formally, we need to check the exponent, but it is 1).  Second, we see that the ratio $\lambda_2/\lambda_1$ provides a good estimate of the error, with $\lambda_2 < 0.04\lambda_1$ for about percent level accuracy.
-
-These values are probably quite specific to this problem.  With work, one can probably understand exactly how these errors behave.
-
-+++
-
-Now, for a fixed level of noise, can we improve the results by taking more images?
-
-```{code-cell}
-2**np.arange(2, 7)
-```
-
-```{code-cell}
-import tqdm
-Nps = np.array([3] + (2**np.arange(2, 7)).tolist())
-Nsamples = 100
-eta = 1e-4
-errs = []
-stds = []
-for Np in tqdm.tqdm(Nps):
-    r = RetrievePhase(Np=Np)
-    errs_ = [abs(r.get_phase(problem=p, eta=eta)[0] -  p.phi).max()
-             for _sample in range(Nsamples)]
-    errs.append(np.mean(errs_))
-    stds.append(np.std(errs_))
-    
-```
-
-```{code-cell}
-errs, stds = map(np.asarray, (errs, stds))
-fig, ax = plt.subplots(figsize=(6,3))
-ax.loglog(1/Nps, errs)
-ax.errorbar(1/Nps, errs, stds)
-ax.set(xlabel="$N_p$", ylabel="Average max abs. err. in φ");
-ax.set_xticks(1/Nps)
-ax.set_xticklabels(Nps);
 ```
