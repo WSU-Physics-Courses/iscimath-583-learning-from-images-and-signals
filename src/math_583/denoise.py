@@ -1,5 +1,6 @@
 """Module with tools for exploring image denoising.
 """
+from functools import partial
 import logging
 from pathlib import Path
 
@@ -17,6 +18,13 @@ logging.getLogger("PIL").setLevel(logging.ERROR)  # Suppress PIL messages
 sp = scipy
 
 plt.rcParams["image.cmap"] = "gray"  # Use greyscale as a default.
+
+
+def subplots(cols=1, rows=1, height=3, **kw):
+    """More convenient subplots that also sets the figsize."""
+    args = dict(figsize=(cols * height, rows * height))
+    args.update(kw)
+    return plt.subplots(rows, cols, **args)
 
 
 class Base:
@@ -41,7 +49,7 @@ class Image(Base):
     seed = 2
 
     def init(self):
-        self.rng = np.random.default_rng(seed=2)
+        self.rng = np.random.default_rng(seed=self.seed)
         self._filename = Path(self.dir) / self.filename
         self.image = PIL.Image.open(self._filename)
         self.shape = self.image.size[::-1]
@@ -51,7 +59,7 @@ class Image(Base):
         """Return the RGB form of the image."""
         return np.asarray(self.image.convert("RGB"))
 
-    def get_data(self, normalize=False, sigma=0, rng=None):
+    def get_data(self, normalize=True, sigma=0, rng=None):
         """Return greyscale image.
 
         Arguments
@@ -97,7 +105,7 @@ class Image(Base):
         """Use the image as the representation for IPython display purposes."""
         return self.image._repr_png_()
 
-    def imshow(self, u, vmin=None, vmax=None, ax=None, **kw):
+    def show(self, u, vmin=None, vmax=None, ax=None, **kw):
         if vmax is None:
             if u.dtype == np.dtype("uint8"):
                 vmax = max(255, u.max())
@@ -112,42 +120,65 @@ class Image(Base):
         ax.imshow(u, vmin=vmin, vmax=vmax, **kw)
         ax.axis("off")
 
+    imshow = show
+
 
 class Denoise(Base):
     lam = 1.0
     mode = "reflect"
     image = None
     sigma = 0.5
+    seed = 2
 
     def init(self):
-        self.u_exact = self.image.get_data(sigma=0)
-        self.u_noise = self.image.get_data(sigma=self.sigma)
+        self.rng = np.random.default_rng(seed=self.seed)
+        self.u_exact = self.image.get_data(sigma=0, normalize=True)
+        self.u_noise = self.image.get_data(sigma=self.sigma,
+                                           normalize=True,
+                                           rng=self.rng)
+        self._E_noise = self.get_energy(self.u_noise,
+                                        parts=True,
+                                        normalize=False)
+        self._E_exact = self.get_energy(self.u_exact, parts=True)
 
     def laplacian(self, u):
         """Return the laplacian of u."""
         return sp.ndimage.laplace(u, mode=self.mode)
 
-    def _u_noise(self, u_noise):
-        if u_noise is None:
-            u_noise = self.u_noise
-        return np.asarray(u_noise)
+    def get_energy(self, u, parts=False, normalize=True):
+        """Return the energy.
 
-    def get_energy(self, u, u_noise=None):
-        """Return the energy."""
-        u_noise = self._u_noise(u_noise)
+        Arguments
+        ---------
+        parts : bool
+            If True, return (E, E_regularization, E_data_fidelity)
+        normalize : bool
+            If True, normalize by the starting values for u_noise.
+        """
+        u_noise = self.u_noise
         E_regularization = (-u * self.laplacian(u)).sum()
-        E_data_fidelity = (np.abs(u - u_noise) ** 2).sum()
-        print(f"{E_regularization=}, {E_data_fidelity=}")
-        return E_regularization + self.lam * E_data_fidelity
+        E_data_fidelity = (abs(u - u_noise)**2).sum()
+        E = E_regularization + self.lam * E_data_fidelity
+        E0 = 1
+        if normalize:
+            E0 = self._E_noise[0]
+
+        if parts:
+            return (E / E0, E_regularization / E0, E_data_fidelity / E0)
+        else:
+            return E / E0
 
     def pack(self, u):
         """Return y, the 1d real representation of u for solving."""
         return np.ravel(u)
 
-    def unpack(self, y, u_noise=None):
+    def unpack(self, y):
         """Return `u` from the 1d real representation y."""
-        u_noise = self._u_noise(u_noise)
-        return np.reshape(y, u_noise.shape)
+        return np.reshape(y, self.u_noise.shape)
+
+    def compute_dy_dt(self, t, y):
+        """Return dy_dt for the solver."""
+        return -self.beta * self._df(y=y)
 
     def _f(self, y):
         """Return the energy"""
@@ -155,18 +186,54 @@ class Denoise(Base):
 
     def _df(self, y, u_noise=None):
         """Return the gradient of f(y)."""
+        E0 = self._E_noise[0]
         u = self.unpack(y)
-        u_noise = self._u_noise(u_noise)
-        return self.pack(2 * (-self.laplacian(u) + self.lam * (u - u_noise)))
+        return self.pack(2 * (-self.laplacian(u) + self.lam *
+                              (u - self.u_noise))) / E0
 
-    def compute_dy_dt(self, t, y):
-        """Return dy_dt for the solver."""
-        return -self.beta * self.df(y=y)
-
-    def callback(self, y, state):
+    def callback(self, y, plot=False):
         u = self.unpack(y)
+        E, E_r, E_f = self.get_energy(u, parts=True)
 
-    def minimize(self, u0=None, method="BFGS", **kw):
-        y0 = self.pack(self._u_noise(u0))
-        res = sp.optimize.minimize(self.f, x0=y0, jac=self.df, method=method, **kw)
-        return res
+        msg = f"E={E:.2g}, E_r={E_r:.2g}, E_f={E_f:.2g}"
+        if plot:
+            import IPython.display
+
+            fig = plt.gcf()
+            ax = plt.gca()
+            ax.cla()
+            IPython.display.clear_output(wait=True)
+            self.image.show(u, ax=ax)
+            ax.set(title=msg)
+            IPython.display.display(fig)
+        else:
+            print(msg)
+
+    def minimize(self,
+                 u0=None,
+                 method="L-BFGS-B",
+                 callback=True,
+                 tol=1e-8,
+                 plot=False,
+                 **kw):
+        if u0 is None:
+            u0 = self.u_noise
+        y0 = self.pack(u0)
+        if callback:
+            callback = partial(self.callback, plot=plot)
+        res = sp.optimize.minimize(
+            self._f,
+            x0=y0,
+            jac=self._df,
+            method=method,
+            callback=callback,
+            tol=tol,
+            **kw,
+        )
+        if not res.success:
+            raise Exception(res.message)
+
+        if plot:
+            plt.close("all")
+        u = self.unpack(res.x)
+        return u

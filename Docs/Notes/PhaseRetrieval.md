@@ -12,7 +12,7 @@ kernelspec:
   name: math-583
 ---
 
-```{code-cell} ipython3
+```{code-cell}
 :tags: [hide-cell]
 
 import mmf_setup;mmf_setup.nbinit()

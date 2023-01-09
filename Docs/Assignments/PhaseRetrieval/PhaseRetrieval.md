@@ -12,7 +12,7 @@ kernelspec:
   name: math-583
 ---
 
-```{code-cell} ipython3
+```{code-cell}
 :tags: [hide-cell]
 
 import mmf_setup; mmf_setup.nbinit()
@@ -63,7 +63,7 @@ $2\pi$.  To reconstruct the smooth $\phi(x)$, one can use the
 As encouragement, a simple solution with these conditions can be implemented in less
 than 20 lines, which works reasonably well even with moderate noise $\eta_n$.
 
-```{code-cell} ipython3
+```{code-cell}
 %matplotlib inline
 import numpy as np, matplotlib.pyplot as plt
 
@@ -97,7 +97,7 @@ ax.pcolormesh(x, thetas, I.T, shading="auto")
 ax.set(ylabel=r"θ", xlabel="x");
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 # Try to find a solution!
 
 plt.plot(x, get_residual(phi+1))
@@ -105,7 +105,7 @@ plt.plot(x, get_residual(phi+1))
 
 # A Simple Solution
 
-```{code-cell} ipython3
+```{code-cell}
 from skimage.restoration import unwrap_phase
 
 Np = 10  # Number of images
@@ -156,7 +156,7 @@ plt.plot(x, phase)
 
 We now re-code the same problem, but a little more modular so that we can explore the sensitivity to errors etc.
 
-````{code-cell} ipython3
+````{code-cell}
 class Base:
     """Base class to set attributes."""
 
@@ -172,7 +172,7 @@ p = Problem()
 
 First we explore the sensitivity to noise:
 
-```{code-cell} ipython3
+```{code-cell}
 r = RetrievePhase(Np=10)
 
 etas = 10**np.linspace(-12, -1, 500)
@@ -200,11 +200,11 @@ These values are probably quite specific to this problem.  With work, one can pr
 
 Now, for a fixed level of noise, can we improve the results by taking more images?
 
-```{code-cell} ipython3
+```{code-cell}
 2**np.arange(2, 7)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 import tqdm
 Nps = np.array([3] + (2**np.arange(2, 7)).tolist())
 Nsamples = 100
@@ -220,7 +220,7 @@ for Np in tqdm.tqdm(Nps):
     
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 errs, stds = map(np.asarray, (errs, stds))
 fig, ax = plt.subplots(figsize=(6,3))
 ax.loglog(1/Nps, errs)
@@ -230,7 +230,7 @@ ax.set_xticks(1/Nps)
 ax.set_xticklabels(Nps);
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 %%file phase_retrieval.py
 import numpy as np
 from skimage.restoration import unwrap_phase

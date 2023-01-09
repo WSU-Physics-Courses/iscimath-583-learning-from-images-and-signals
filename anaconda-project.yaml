@@ -45,15 +45,7 @@ commands:
     env_spec: math-583
 
   test:
-    unix: |
-      pytest
-      genbadge tests -i _artifacts/junit.xml -o _artifacts/test-badge.svg
-      genbadge coverage -i _artifacts/coverage.xml -o _artifacts/coverage-badge.svg
-    env_spec: math-583
-  test-0:
-    unix: |
-      pytest -k test_official_assignment_0 --no-cov
-      genbadge tests -i _artifacts/junit.xml -o _artifacts/test-0-badge.svg
+    unix: pytest
     env_spec: math-583
   
 #
