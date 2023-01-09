@@ -36,6 +36,8 @@ except ImportError:
 %matplotlib inline
 # Import numpy and matplotlib.  These aliases are quite standard
 import numpy as np, matplotlib.pyplot as plt
+import scipy.stats
+sp = scipy
 # Suppress some logging messages in Pillow (Python Imaging Library)
 import logging; logging.getLogger('PIL').setLevel(logging.ERROR)  # Suppress PIL messages
 ```
@@ -323,6 +325,8 @@ We start with an image and various levels of noise.  Here we normalize the image
 ```{code-cell} ipython3
 %matplotlib inline
 import numpy as np, matplotlib.pyplot as plt
+import scipy.stats
+sp = scipy
 import PIL
 from importlib import reload
 import denoise;reload(denoise)
