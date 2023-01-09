@@ -18,8 +18,11 @@ kernelspec:
 ```{code-cell} ipython3
 :tags: [hide-cell]
 
+# My tools: sets the path and adds some math macros for LaTeX equations
+# Needs internet access to install.
 try:
     import mmf_setup
+    mmf_setup.nbinit()
 except ImportError:
     import sys
     !{sys.executable} -m pip install --user --upgrade mmf-setup
@@ -33,13 +36,43 @@ except ImportError:
 %matplotlib inline
 # Import numpy and matplotlib.  These aliases are quite standard
 import numpy as np, matplotlib.pyplot as plt
-# My tools: sets the path and adds some math macros for LaTeX equations
-import mmf_setup; mmf_setup.nbinit()
 # Suppress some logging messages in Pillow (Python Imaging Library)
 import logging; logging.getLogger('PIL').setLevel(logging.ERROR)  # Suppress PIL messages
 ```
 
 # Denoising
+$$\newcommand{\vect}[1]{\vec{\boldsymbol{#1}}}
+\newcommand{\uvect}[1]{\hat{\boldsymbol{#1}}}
+\newcommand{\abs}[1]{\lvert#1\rvert}
+\newcommand{\norm}[1]{\lVert#1\rVert}
+\newcommand{\I}{\mathrm{i}}
+\newcommand{\ket}[1]{\left|#1\right\rangle}
+\newcommand{\bra}[1]{\left\langle#1\right|}
+\newcommand{\braket}[1]{\langle#1\rangle}
+\newcommand{\Braket}[1]{\left\langle#1\right\rangle}
+\newcommand{\op}[1]{\boldsymbol{#1}}
+\newcommand{\mat}[1]{\underline{\boldsymbol{#1}}}
+\newcommand{\d}{\mathrm{d}}
+\newcommand{\D}[1]{\mathcal{D}[#1]\;}
+\newcommand{\pdiff}[2]{\frac{\partial{#1}}{\partial{#2}}}
+\newcommand{\diff}[2]{\frac{\d{#1}}{\d{#2}}}
+\newcommand{\ddiff}[2]{\frac{\delta{#1}}{\delta{#2}}}
+\newcommand{\floor}[1]{\left\lfloor#1\right\rfloor}
+\newcommand{\ceil}[1]{\left\lceil#1\right\rceil}
+\DeclareMathOperator{\Tr}{Tr}
+\DeclareMathOperator{\erf}{erf}
+\DeclareMathOperator{\erfi}{erfi}
+\DeclareMathOperator{\sech}{sech}
+\DeclareMathOperator{\sinc}{sinc}
+\DeclareMathOperator{\sn}{sn}
+\DeclareMathOperator{\cn}{cn}
+\DeclareMathOperator{\dn}{dn}
+\DeclareMathOperator{\sgn}{sgn}
+\DeclareMathOperator{\order}{O}
+\DeclareMathOperator{\diag}{diag}
+\DeclareMathOperator{\span}{span}
+\newcommand{\mylabel}[1]{\label{#1}\tag{#1}}
+\newcommand{\degree}{\circ}$$
 
 +++
 
@@ -361,7 +394,8 @@ plt.close('all')
 
 The following cells contain the source code for modules used in this document.  They
 need to be executed once to generate the source files, but afterwards can just be
-imported.  They use the [`%%file`]() magic which writes the contents to file.
+imported.  They use the [`%%writefile`]() magic which writes the contents to file.  We
+will usually distribute this with the handout.
 
 ```{code-cell} ipython3
 #%%writefile denoise.py
@@ -369,14 +403,13 @@ imported.  They use the [`%%file`]() magic which writes the contents to file.
 """
 from functools import partial
 import logging
+import os.path
 from pathlib import Path
 
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.ndimage
 import scipy.optimize
-
-import mmf_setup
 
 import PIL
 
@@ -411,7 +444,16 @@ class Base:
 class Image(Base):
     """Class to load and process images."""
 
-    dir = Path(mmf_setup.ROOT) / ".." / "_data" / "images"
+    if os.path.exists("images"):
+        # Use a local directory if it exists.  Does not need mmf_setup
+        dir = Path("images")
+    else:
+        # Otherwise (i.e. for documentation) go relative to ROOT
+        import mmf_setup
+
+        mmf_setup.set_path()
+        dir = Path(mmf_setup.ROOT) / ".." / "_data" / "images"
+
     filename = "The-original-cameraman-image.png"
     seed = 2
 

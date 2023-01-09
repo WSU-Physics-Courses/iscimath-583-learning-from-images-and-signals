@@ -10,8 +10,6 @@ import matplotlib.pyplot as plt
 import scipy.ndimage
 import scipy.optimize
 
-import mmf_setup
-
 import PIL
 
 logging.getLogger("PIL").setLevel(logging.ERROR)  # Suppress PIL messages
@@ -45,8 +43,16 @@ class Base:
 class Image(Base):
     """Class to load and process images."""
 
-    dir = (Path("images") if os.path.exists("images") else
-           Path(mmf_setup.ROOT) / ".." / "_data" / "images")
+    if os.path.exists("images"):
+        # Use a local directory if it exists.  Does not need mmf_setup
+        dir = Path("images")
+    else:
+        # Otherwise (i.e. for documentation) go relative to ROOT
+        import mmf_setup
+
+        mmf_setup.set_path()
+        dir = Path(mmf_setup.ROOT) / ".." / "_data" / "images"
+
     filename = "The-original-cameraman-image.png"
     seed = 2
 
