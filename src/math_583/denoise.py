@@ -2,6 +2,7 @@
 """
 from functools import partial
 import logging
+import os.path
 from pathlib import Path
 
 import numpy as np
@@ -44,7 +45,8 @@ class Base:
 class Image(Base):
     """Class to load and process images."""
 
-    dir = Path(mmf_setup.ROOT) / ".." / "_data" / "images"
+    dir = (Path("images") if os.path.exists("images") else
+           Path(mmf_setup.ROOT) / ".." / "_data" / "images")
     filename = "The-original-cameraman-image.png"
     seed = 2
 
