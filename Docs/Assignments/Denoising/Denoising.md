@@ -322,7 +322,6 @@ We start with an image and various levels of noise.  Here we normalize the image
 
 ```{code-cell} ipython3
 %matplotlib inline
-import mmf_setup;mmf_setup.set_path()
 import numpy as np, matplotlib.pyplot as plt
 import PIL
 from importlib import reload
