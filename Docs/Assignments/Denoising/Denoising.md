@@ -18,6 +18,17 @@ kernelspec:
 ```{code-cell} ipython3
 :tags: [hide-cell]
 
+try:
+    import mmf_setup
+except ImportError:
+    import sys
+    !{sys.executable} -m pip install --user --upgrade mmf-setup
+    print("Restart your kernel and try again")
+```
+
+```{code-cell} ipython3
+:tags: [hide-cell]
+
 # Initialize plotting:
 %matplotlib inline
 # Import numpy and matplotlib.  These aliases are quite standard
