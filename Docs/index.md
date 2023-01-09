@@ -20,17 +20,44 @@
 Welcome to Math 583 - Learning from Signals!  This is the main documentation page for the
 course.  For more class information, please see the {ref}`sec:sylabus`.
 
-Instructors: the information presented here at the start of the course documentation is
-contained in the `Docs/index.md` file, which you should edit to provide an overview of
-the course.
 
-One reasonable option might be to replace this by a literal include of the top-level
-`README.md` file with the following code:
+# TL;DR
 
-````markdown
-```{include} ../README.md
-``` 
-````
+* [Read the Docs][]: The official online documentation.  Might be slightly out of date
+  during the course, but ultimately, this is where the final online documentation will
+  be hosted.
+* [Generated Documentation on CoCalc][]: This is the generated documentation on CoCalc.
+  This is likely to be a bit more up-to-date than [Read the Docs][], but will disappear
+  after the course (and is only accessible by class participants).
+* [CoCalc Shared Project][]: All participants should have access to this project.  This
+  is where the instructors will demonstrate [code in class][class notebooks], post
+  handouts, [lecture notes][], etc.  Feel free to play with the material here, but don't
+  significantly change or modify the material.  If you want to significantly change a
+  notebook, please copy it to a folder with your name in the [Workspaces][] folder, or
+  copy the notebook to your student project.
+* [GitLab Course Project][]: Course repository for the official course documentation and
+  source code.
+  
+[Generated Documentation on CoCalc]: <https://cocalc.com/5111388d-0811-49c4-9cb9-223049d52da7/raw/iSciMath583/Docs/_build/html/index.html>
+[Read the Docs]: <https://iscimath-583-learning-from-signals.readthedocs.io/en/latest/>
+[CoCalc Shared Project]: <https://cocalc.com/projects/5111388d-0811-49c4-9cb9-223049d52da7/>
+[lecture notes]: <https://cocalc.com/projects/5111388d-0811-49c4-9cb9-223049d52da7/files/Lectures/>
+[class notebooks]: <https://cocalc.com/projects/5111388d-0811-49c4-9cb9-223049d52da7/files/ClassNotebooks/>
+[Workspaces]: <https://cocalc.com/projects/5111388d-0811-49c4-9cb9-223049d52da7/files/Workspaces/>
+[GitLab Course Project]: <https://gitlab.com/wsu-courses/iscimath-583-learning-from-images-and-signals>
+
+# Getting Started
+
+You should have an email invitation from CoCalc inviting you to create an account and
+join the course.  Once you create your account (please use the email you were invited
+on, or contact an instructor), then under <https://cocalc.com/projects> you should see
+the [CoCalc Shared Project][] and a corresponding private student project.
+
+Open your private student project, and purchase a license.  There should be an option
+for a $14 student license for the term: this is probably the most cost effective unless
+you want to purchase a license for the year.  If you already have a license, you are
+free to use that.
+
 
 ```{toctree}
 ---
