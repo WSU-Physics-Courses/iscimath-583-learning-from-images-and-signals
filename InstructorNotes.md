@@ -10,7 +10,7 @@ ls "${ASSIGNMENT}"
 jupytext --sync ${ASSIGNMENT}/*.md
 cp -Hr "${ASSIGNMENT}" .
 find . -type d -name "__pycache__" -exec rm -rf {} +
-find . -type d -name ".ipynb_checkoints" -exec rm -rf {} +
+find . -type d -name ".ipynb_checkpoints" -exec rm -rf {} +
 find . -name "*.md" -delete
 rsync -avz . smcwsu:iSciMath583/Assignments
 ```

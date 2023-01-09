@@ -364,7 +364,7 @@ need to be executed once to generate the source files, but afterwards can just b
 imported.  They use the [`%%file`]() magic which writes the contents to file.
 
 ```{code-cell} ipython3
-%%writefile denoise.py
+#%%writefile denoise.py
 """Module with tools for exploring image denoising.
 """
 from functools import partial
@@ -604,44 +604,4 @@ class Denoise(Base):
             plt.close("all")
         u = self.unpack(res.x)
         return u
-from pathlib import Path
-
-import numpy as np
-import matplotlib.pyplot as plt
-
-import PIL
-
-
-class Base:
-    """Base class for setting attributes."""
-
-    def __init__(self, **kw):
-        for key in kw:
-            if not hasattr(self, key):
-                raise ValueError(f"Unknown {key=}")
-            setattr(self, key, kw[key])
-        self.init()
-
-    def init(self):
-        return
-
-
-class Image(Base):
-    """Class to load and process images."""
-    dir = "images"
-    filename = "The-original-cameraman-image.png"
-
-    def init(self):
-        self._filename = Path(self.dir) / self.filename
-        self.image = PIL.Image.open(self._filename)
-
-    @property
-    def rgb(self):
-        """Return the RGB form of the image."""
-        return self.image.convert("RGB")
-
-    @property
-    def data(self):
-        """Return a greyscale image with data between 0 and 255."""
-        return self.image.convert("L")
 ```
