@@ -33,7 +33,7 @@ where we assume that $\eta_n(x)$ is noise and relatively small, how can we recon
 $\phi(x)$?
 This problem is known as [phase retrieval][].  It is common in physical applications of
 [interferometry][] or interferometric imaging, and is the subject of research at WSU in
-the Engels' and Forbes' groups (see {cite-p}`Mossman:2022` for an application with atom lasers.)
+the Engels' and Forbes' groups (see {cite:p}`Mossman:2022` for an application with atom lasers.)
 
 ::::{admonition} Try it!
 

@@ -736,6 +736,23 @@ approximations and explore how these depend on the number of points used.
 
 ::::
 
+## Other Applications
+
+In this document we have focused on the standard complex Fourier transform for periodic
+functions.  There are many other closely related applications, many of which are
+discussed on the [DFT][] page.  For example:
+* Computing the DFT of purely real and imaginary signals.
+* The discrete cosine and sine transforms ([DCT][] and [DST][]).  These allow you to
+  implement different boundary conditions or deal with even and odd function.  For
+  example, the [DCT][] implements a [DFT][] for even functions, while the [DST][] 
+  allows you to transform odd functions.  There are actually 8 different [DST][]
+  transforms allowing one to consider various mixed boundary conditions ([Dirichlet][]
+  and [Neumann][]).  These are simple conceptually, but very tricky in the
+  details: special attention must be paid to about exactly which grid point or interval
+  the function is symmetric about.
+
+[DCT]: <https://en.wikipedia.org/wiki/Discrete_cosine_transform>
+[DST]: <https://en.wikipedia.org/wiki/Discrete_sine_transform>
 
 [periodic]: <https://en.wikipedia.org/wiki/Periodic_boundary_conditions>
 [Dirichlet]: <https://en.wikipedia.org/wiki/Dirichlet_boundary_condition>

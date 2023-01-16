@@ -473,7 +473,7 @@ def go(sigma=0.4, log_lam=-1):
 
 The following cells contain the source code for modules used in this document.  They
 need to be executed once to generate the source files, but afterwards can just be
-imported.  They use the [`%%writefile`]() magic which writes the contents to file.  We
+imported.  They use the `%%writefile` magic which writes the contents to file.  We
 will usually distribute this with the handout.
 
 ```{code-cell} ipython3

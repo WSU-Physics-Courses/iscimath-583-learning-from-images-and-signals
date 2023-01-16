@@ -12,7 +12,7 @@ kernelspec:
   name: math-583
 ---
 
-```{code-cell}
+```{code-cell} ipython3
 :hide-cell: null
 
 import mmf_setup;mmf_setup.nbinit()
@@ -90,7 +90,7 @@ of the document contains information about the kernel that should be used etc.  
 are parsed using [MyST-NB] and the output of cells will be displayed.  For example, here
 is a plot demonstrating [Liouville's Theorem].
 
-```{code-cell}
+```{code-cell} ipython3
 :tags: [hide-input, full-width]
 
 plt.rcParams['figure.dpi'] = 300
@@ -210,6 +210,20 @@ output full width, but hiding the code.  (There is a link to click to show the c
 If you need more control, you can [glue] the output to a variable, then load it as a
 proper figure, insert it in a table, etc.
 
+## IPyWidgets
+
+If you want some of your notebooks to also be useful as stand-alone demonstrations, then
+you might be tempted to include features like [IPyWidgets][].  This requires some work
+to build properly:
+
+```{code-cell} ipython3
+from ipywidgets import interact
+
+@interact
+def go(p=1.0):
+    print(p)
+```
+
 ## Manim
 
 
@@ -217,7 +231,7 @@ Your project was generated from a template without Manim support.  To use, pleas
 regenerate the project with `use_manim = "yes"`.
 the 
 
-
+[IPyWidgets]: <https://ipywidgets.readthedocs.io/en/latest/>
 [Manim Community]: <https://www.manim.community/>
 [Jacobi elliptic functions]: <https://en.wikipedia.org/wiki/Jacobi_elliptic_functions>
 [glue]: <https://myst-nb.readthedocs.io/en/latest/use/glue.html>
