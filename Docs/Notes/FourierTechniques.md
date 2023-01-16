@@ -444,7 +444,7 @@ boundary conditions):
 \end{gather*}
 it is not exact for finite computations.
 
-Instead, if trying to implement this with a minimizer that requires high-accurate
+Instead, if trying to implement this with a minimize that requires high-accurate
 derivatives, make sure that the energy is computed in a way that exactly defines the
 appropriate minimization problem such as in the following case:
 \begin{gather*}
@@ -454,6 +454,287 @@ appropriate minimization problem such as in the following case:
 While this is formally equivalent in the continuum limit, it is also exactly equivalent
 numerically to the numerical implementation of $E'[u]$ as long as the matrix
 representing $\mat{D}_2 \approx \nabla^2$ is symmetric $\mat{D}_s^T = \mat{D}_2$.
+
+## Exercises
+
+### Exploring the DFT
+
+Consider a function in 1D $f(x)$ tabulated on $N$ lattice points $x_n = n\d{x}$ in a
+periodic box of length $L = N \d{x}$.  As a test function, consider:
+\begin{align*}
+  f_{\eta}(x) &= \exp\left(\frac{-1}{1+\eta\cos(k x)}\right),\\
+  f'_{\eta}(x) &= \frac{-\eta k \sin(k x)}{\bigl(1+\eta\cos(k x)\bigr)^2}f_{\eta}(x),\\
+  f''_{\eta}(x) &= 
+  \frac{-\eta k^2\Bigl(\eta\bigl(1 + \cos^2(kx) - \eta\cos^3(kx)\bigr) + (1+2\eta^2)\cos(kx)\Bigr)}{\bigl(1+\eta\cos(k x)\bigr)^4}
+  f_{\eta}(x)
+\end{align*}
+where $k = 2\pi n/L$ is one of the lattice momenta to ensure that the function has
+appropriate periodicity:
+```{code-cell}
+:tags: [hide-input]
+
+%matplotlib inline
+from functools import partial
+import numpy as np, matplotlib.pyplot as plt
+_EPS = np.finfo(float).eps
+N = 256
+L = 10.0
+dx = L/N
+x = np.arange(N) * dx
+kx = 2*np.pi * np.fft.fftfreq(N, dx)
+dk = 2*np.pi / L
+
+def f(x, eta=1, d=0, n=1, L=L):
+    """Return the dth derivative of f(x)."""
+    k = 2*np.pi * n / L
+    c = np.cos(k*x)
+    eta_c_1 = eta * c + 1 + _EPS
+    f = np.exp(-1/eta_c_1)
+    if d == 0:
+        res = f
+    elif d == 1:
+        res = -eta*k/eta_c_1**2 * np.sin(k*x) * f
+    elif d == 2:
+        c2 = c**2
+        c3 = c*c2
+        res = -eta*k**2/eta_c_1**4*(eta*(1+c2 - eta*c3) + (1+2*eta**2)*c) * f
+    return res
+
+# Test against numerical derivatives to make sure we did not mess up.
+for eta in [0, 0.5, 1.0]:
+    _f = partial(f, eta=eta)
+    #print(abs(np.gradient(_f(x), x, edge_order=2)- _f(x, d=1)).max())
+    #print(abs(np.gradient(_f(x, d=1), x, edge_order=2)- _f(x, d=2)).max())
+    assert np.allclose(np.gradient(_f(x), x, edge_order=2), _f(x, d=1), atol=4e-4)
+    assert np.allclose(np.gradient(_f(x, d=1), x, edge_order=2), _f(x, d=2), atol=2e-3)
+
+fig, axs = plt.subplots(1, 2, figsize=(15, 6))
+for n, eta in enumerate([0.5, 0.8, 1.0]):
+    _f = partial(f, eta=eta)
+    fx, dfx, ddfx = _f(x), _f(x, d=1), _f(x, d=2)
+    fk = np.fft.fft(fx)
+    kx_, fk_ = np.fft.fftshift(kx), np.fft.fftshift(fk)
+    
+    ax = axs[0]
+    args = dict(c=f"C{n}")
+    ax.plot(x, fx, '-', label=f"$f_{{\eta={eta}}}(x)$", **args)
+    if n == 0:
+        args.update(label=f"$f'_{{\eta={eta}}}(x)$")
+    ax.plot(x, dfx, '--', **args)
+    if n == 0:
+        args.update(label=f"$f''_{{\eta={eta}}}(x)$")
+    ax.plot(x, ddfx, ':', **args)
+
+    ax = axs[1]
+    ax.semilogy(abs(kx_/dk), abs(fk_), '-', c=f"C{n}", label=fr"$\tilde{{f}}_{{\eta={eta}}}(k)$")
+    ax.set(xlabel='$k_x/dk = k_x L / 2\pi$', ylabel=r"$|\tilde{f}_{k}|$");
+
+axs[0].set(xlabel='$x$')
+axs[0].legend();
+
+axs[1].yaxis.tick_right()
+axs[1].yaxis.set_label_position("right")
+axs[1].legend();
+```
+
+This function has the property that it is formally analytic for $\eta < 1$, but becomes
+non-analytic with essential singularities at $\cos(kx)=-1$ for $\eta = 1$:
+\begin{gather*}
+  f_1(x) = \exp\left(\frac{1}{1+\cos(kx)}\right).
+\end{gather*}
+Note, however, that the function remains very smooth $f_1 \in C^\infty$.
+
+For $\eta<1$, we see the typical behavior that the magnitude of the Fourier coefficients
+falls exponentially as a function of the wave-number $n = k_n/\d{k}$.  In this
+particular case, we expect to achieve [machine precision][] for $n > 30$ for $\eta =
+0.5$ and for $n>50$ for $\eta = 0.8$.  This means, that we only need $N=60$ or $N=100$
+points respectively to accurately represent and work with the function.
+
+Once we lose analyticity, however, then the Fourier coefficients start falling off as a
+power law, and we need far more points.  For smooth functions like this, spectral
+methods still do better than finite difference, but if there is a cusp or discontinuity,
+then spectral methods lose their advantage.
+
+Note that the functions $f_\eta(x)$ are both periodic over $x\in[0, L]$ and flat at the
+boundaries, therefore satisfying Neumann boundary conditions.  Use the functions to test
+your code.
+
+Represent the function $f(x)$ as a vector $\ket{f}$ that can be expressed in terms of
+its tabulated values $f_n = f(x_n)$ in the **standard basis** $\{\ket{x_n}\}$:
+\begin{gather*}
+  \ket{f} = \sum_{n} \ket{x_n}f_n = \sum_{n} \ket{x_n}f(x_n).
+\end{gather*}
+:::{margin}
+This is a slight abuse of notation: technically, the vector $\ket{f}$ should be thought
+of as an abstract vector, whereas the "list of numbers" are actually the coefficients of
+this vector in a specified basis.  I.e. $f_n = \braket{x_n|f}$.  We will, however, often
+say that the vector is equal to the list of numbers.  Unless otherwise specified, this
+means the components of the vector in the **standard basis** $\{\ket{n_x}\}$ whose
+coefficients are the value of the function at the points $x_n$:
+\begin{gather*}
+  f_n = \braket{x_n|f} = f(x_n).
+\end{gather*}
+:::
+Think of this numerically in terms of the column vectors:
+\begin{gather*}
+  \ket{x_0} = \begin{pmatrix}
+    1 \\
+    0 \\
+    \vdots\\
+    0
+  \end{pmatrix}, \qquad
+  \ket{x_1} = \begin{pmatrix}
+    0 \\
+    1 \\
+    \vdots\\
+    0
+  \end{pmatrix},\qquad
+  \ket{f} = \begin{pmatrix}
+    f_0 = f(x_0)\\
+    f_1 = f(x_1)\\
+    \vdots\\
+    f_{N-1} = f(x_{N-1})
+  \end{pmatrix}.
+\end{gather*}
+The standard basis is orthonormal and complete:
+\begin{gather*}
+  \braket{x_m|x_n} = \delta_{nm}, \qquad
+  \mat{1} = \sum_{n}\ket{x_n}\bra{x_n},
+\end{gather*}
+hence, the first expression is:
+\begin{gather*}
+  \ket{f} = \mat{1}\ket{f} = \sum_{n}\ket{x_n}\underbrace{\braket{x_n|f}}_{f_n=f(x_n)}
+  = \sum_{n}\ket{x_n}f_n.
+\end{gather*}
+
+The Fourier transform can be simply thought of as a change of basis into a new basis of
+plane waves $\{\ket{k_n}\}$ corresponding to the functions $\exp(\I k_n x)$.  To make
+this all work out, we must properly normalize the vectors:
+\begin{gather*}
+  \braket{x_m|k_n} = \frac{1}{\sqrt{N}}e^{\I k_n x_m} = [\mat{F}^{-1}]_{mn}.
+\end{gather*}
+As we shall show, these are the coefficients of the matrix $\mat{F}^{-1}$ implementing
+the inverse Fourier transform.
+
+::::{admonition} Exercise: Show that $\braket{k_i|k_j} = \delta_{ij}$.
+:class: dropdown
+
+\begin{gather*}
+  \braket{k_i|k_j} = \braket{k_i|\mat{1}|k_j}
+                   = \sum_{n}\overbrace{\braket{k_i|x_n}}^{\frac{e^{-\I k_ix_n}}{\sqrt{N}}}
+                             \overbrace{\braket{x_n|k_j}}^{\frac{e^{\I k_jx_n}}{\sqrt{N}}}\\
+   = \frac{1}{N}\sum_{n}e^{\I (k_j - k_i) x_n}
+   = \frac{1}{N}\sum_{n=0}^{N-1}e^{2\pi \I (j - i) n/N}
+   = \delta_{ij}.
+\end{gather*}
+::::
+
+The [DFT][] is the transformation that takes the coefficients $f_n = \braket{x_n|f}$
+into the Fourier coefficients $\tilde{f}_m = \braket{k_m|f}$.  In the standard basis,
+this can be represented by a matrix $\mat{F}$ :
+\begin{gather*}
+  \tilde{f} = \F(f), \qquad
+  \tilde{f}_m = \sum_{n}[\mat{F}]_{mn}f_n.
+\end{gather*}
+
+::::{admonition} Exercise: What is the matrix $\mat{F}$ and its inverse $\mat{F}^{-1}$?
+:class: dropdown
+
+Expanding these coefficients, we have
+\begin{gather*}
+  \overbrace{\braket{k_m|f}}^{\tilde{f}_m} = \sum_{n}[\mat{F}]_{mn}\overbrace{\braket{x_n|f}}^{f_n}.
+\end{gather*}
+Inserting $\mat{1}$ on the left and expanding this using the completeness of the
+standard basis
+\begin{gather*}
+  \sum_{n}\braket{k_m|x_n}\braket{x_n|f} = \sum_{n}[\mat{F}]_{mn}\braket{x_n|f}
+\end{gather*}
+allows us to identify:
+\begin{gather*}
+  [\mat{F}]_{mn} = \braket{k_m|x_n} = \braket{x_n|k_m}^* 
+  = \frac{e^{-\I k_m x_n}}{\sqrt{N}}
+  = \frac{e^{-2\pi \I mn/N}}{\sqrt{N}}.
+\end{gather*}
+This matrix is unitary, hence the inverse is just the conjugate transpose:
+\begin{gather*}
+  \mat{F}^{-1} = \mat{F}^\dagger, \qquad
+  [\mat{F}^{-1}]_{mn} = [\mat{F}]^{*}_{nm}
+  = \frac{e^{2\pi \I mn/N}}{\sqrt{N}}.
+\end{gather*}
+
+Check these numerically, but note that the numerical implementations have a different
+normalization:
+\begin{gather*}
+  [\mat{F}]_{mn} = e^{-2\pi \I mn / N}, \qquad
+  [\mat{F}^{-1}]_{mn} = \frac{1}{N}e^{2\pi \I mn / N}.
+\end{gather*}
+I.e. the factor $1/N$ is included only in the inverse transform.  For performance, some
+implementations (in particular, the [FFTw][]) drop even this factor, leaving it up to
+the user.
+
+To create these matrices, simply use [broadcasting][], with the first index going down
+through the rows, and the second index going across through the columns:
+```python
+F = np.exp(-2j*k[:, np.newaxis]*x[np.newaxis, :])
+Finv = np.exp(2j*k[np.newaxis, :]*x[:, np.newaxis]) / N
+```
+I think of this as follows: the second index of `F` should act on `f(x)`, hence should
+have changing $x$ values.  Thus, we need `x[np.newaxis, :]`.  The colon here indicates
+which axis actually changes, while the `np.newaxis` (older codes use `None`) represents
+copied values:
+\begin{align*}
+  \texttt{x[:, np.newaxis]} =
+  \begin{pmatrix}
+    x_0 \\
+    % x_1 \\
+    \vdots\\
+    x_{N-1}
+  \end{pmatrix}
+  &\equiv \begin{pmatrix}
+    x_0 & x_0 & \cdots\\
+    % x_1 & x_1 & \cdots\\
+    \vdots & \vdots\\
+    x_{N-1} & x_{N-1} & \cdots
+  \end{pmatrix},
+  \\
+  \texttt{x[np.newaxis, :]} =
+  \begin{pmatrix}
+    x_0 & \cdots & x_{N-1}
+  \end{pmatrix}
+  &\equiv
+  \begin{pmatrix}
+    x_0 % & x_1 
+    & \cdots & x_{N-1}\\
+    x_0 %& x_1 
+    & \cdots & x_{N-1}\\
+    \vdots % & \vdots 
+    & & \vdots
+  \end{pmatrix}.
+\end{align*}
+The [broadcasting][] in NumPy refers to the behavior that, although these arrays are
+actually only a single column vector `x[:, np.newaxis].shape == (N, 1)` and a single row
+vector `x[np.newaxis, :].shape == (1, N)` respectively, they will behave in expressions
+as if they are full matrices as shown, with enough copies to make sense.  This can
+result in significant performance improvements, both for speed, and memory, if used
+appropriately.
+::::
+
+Likewise, the inverse transform satisfies
+\begin{gather*}
+  f = \F^{-1}(\tilde{f}), \qquad
+  f_n = \sum_{m}[\mat{F}^{-1}]_{nm}\tilde{f}_m.
+\end{gather*}
+
+
+::::{admonition} Exercise: Exploring the [DFT][].
+:class: dropdown
+
+Use the formulae defined here, and the [FFT][] as implemented in NumPy to compute the
+derivatives of the provided test function.  Compare this with finite-difference
+approximations and explore how these depend on the number of points used.
+
+::::
+
 
 [periodic]: <https://en.wikipedia.org/wiki/Periodic_boundary_conditions>
 [Dirichlet]: <https://en.wikipedia.org/wiki/Dirichlet_boundary_condition>
@@ -466,7 +747,10 @@ representing $\mat{D}_2 \approx \nabla^2$ is symmetric $\mat{D}_s^T = \mat{D}_2$
 [Kronecker delta]: <https://en.wikipedia.org/wiki/Kronecker_delta>
 [FFT]: <https://en.wikipedia.org/wiki/Fast_Fourier_transform>
 [FFTw]: <https://fftw.org>
+[DFT]: <https://en.wikipedia.org/wiki/Discrete_Fourier_transform>
 [machine precision]: <https://en.wikipedia.org/wiki/Machine_epsilon>
 [Renormalization Group]: <https://physics-552-quantum-iii.readthedocs.io/en/latest/RenormalizationGroup.html>
 [analytic function]: <https://en.wikipedia.org/wiki/Analytic_function>
 [ringing artifacts]: <https://en.wikipedia.org/wiki/Ringing_artifacts>
+[broadcasting]: <https://numpy.org/doc/stable/user/basics.broadcasting.html>
+
