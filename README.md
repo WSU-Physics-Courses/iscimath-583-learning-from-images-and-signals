@@ -1,5 +1,6 @@
 Math 583 - Learning from Signals
 ================================
+
 [![Documentation Status](https://readthedocs.org/projects/iscimath-583-learning-from-signals/badge/?version=latest)](https://iscimath-583-learning-from-signals.io/en/latest/?badge=latest)
 [![gitlab pipeline status](https://gitlab.com/wsu-courses/iscimath-583-learning-from-images-and-signals/badges/main/pipeline.svg)](https://gitlab.com/wsu-courses/iscimath-583-learning-from-images-and-signals/-/commits/main)
 [![gitlab coverage report](https://gitlab.com/wsu-courses/iscimath-583-learning-from-images-and-signals/badges/main/coverage.svg)](https://gitlab.com/wsu-courses/iscimath-583-learning-from-images-and-signals/-/commits/main)
@@ -48,7 +49,7 @@ anaconda-project run shell
 
 In this shell, you can directly run `pytest` for example.
 
-## Developer Notes
+## Developer
 
 This file can be included in the documentation by adding the following to
 `Docs/index.md`:
@@ -59,8 +60,6 @@ This file can be included in the documentation by adding the following to
 ````
 
 See `Docs/index.md` for more details.
-
-
 
 To use this repository:
 
@@ -113,6 +112,7 @@ From scratch
 : I feel it is extremely valuable to understand what is at the core
   of an algorithm, and to be able to quickly implement a simplistic "brute force"
   version.  These have the following advantage:
+
   * Predictable convergence properties.  While often not as accurate or fast as more
     specialized or adaptive routines, simple brute-force versions of an algorithm can
     often be understood completely in terms of convergence properties and/or stability
@@ -133,6 +133,7 @@ From scratch
 As fast as possible
 : When you need accurate results for research, however, it is also very useful to be
   familiar with library techniques so you can quickly get high-precision results. 
+
   * If the appropriate technique is implement in a well-tested library, then one can
     often use it in a few lines of code and implement it in a few minutes of time --
     most of which is spent understanding the arguments.  This allows you to get results
@@ -184,6 +185,7 @@ Justification
     for testing?  What if such problems cannot be found? How should the algorithms
     converge?  Is appropriate convergence being achieved? *(Answering this later
     question quantitatively can provide for very useful test cases.)*
+
   * These skills will definitely be of benefit to anyone looking later for a career in
     industry, but will also help in maintaining code in a research setting.
   * The repository of code developed for this course can serve as a future portfolio.
@@ -268,23 +270,21 @@ use the [GitHub CI] tools, which differ somewhat from those on [GitLab].  In par
 
 3. *(Optional)* Create an account on [GitHub].
 
-
 ## References
 
 * [Python Tutorial](https://docs.python.org/3/tutorial/): This is the definative tutorial for the python language.  If you have not read this and plan to use python, then you should.
 * [NumPy Tutorial](https://numpy.org/numpy-tutorials/): Growing repository of tutorials for using NumPy.  Being able to "think" in terms of arrays *(vectorization)* can greatly simplify your understanding of algorithms, while simultaneously improving your code, both from a performance and a reliability standpoint.  Not every problem benefits from this approach, but many of those in physics do.  *(We should try to [contribute](https://github.com/numpy/numpy-tutorials) to these.)*
 * [Hypermodern Python](https://cjolowicz.github.io/posts/hypermodern-python-01-setup/): Deals with issues about packaging, testing, etc.  I plan to follow this (with some modifications discussed in [Hypothes.is annotations](https://hypothes.is/groups/z7AoNvZ1/computing) to setup the coding framework.
 
-
-
 ## Maintainer Notes
+
 Try to keep this upper-level project as clean as possible, matching the layout expected
 for the students.  This will be turned into a skeleton at some point.
-
 
 ## Tools
 
 ### Cookie Cutter
+
 * https://github.com/cookiecutter/cookiecutter
 * https://cookiecutter-hypermodern-python.readthedocs.io/
 
@@ -308,6 +308,7 @@ anaconda-project clean
 
 Can use GitHub, GitLab, or Heptapod.  With automatic pushing to GitHub, one and run the
 following CI's:
+
 * LGTM.com
 
 * One course repo.  Students clone their own fork and pull changes.  Assignments
@@ -322,7 +323,6 @@ following CI's:
   notebooks (with output) when you want to archive documentation.
   * Maybe do this on an "output" branch or something so the main repo does not get
     cluttered?
-
 
 ## Docs
 
@@ -352,7 +352,6 @@ hg add local.bib _static/ _templates/
 ```
 
 ## CoCalc Setup
-
 
 * [Purchase a license](https://cocalc.com/settings/licenses) with 2 projects to allow
   the course and [WSU Courses CoCalc project] and [Shared CoCalc Project] to run.  This
@@ -434,7 +433,6 @@ hg add local.bib _static/ _templates/
 
   This will create a Conda environment as specified in `anaconda-project.yml` in `envs/math-583`.
 
-
 # Funding
 
 <a href="https://www.nsf.gov"><img width="10%"
@@ -447,44 +445,40 @@ Foundation under [Grant Number 2012190](https://www.nsf.gov/awardsearch/showAwar
 recommendations expressed in this material are those of the author(s) and do not
 necessarily reflect the views of the National Science Foundation.
 
-
 <!-- Links -->
-[Anaconda Project]: <https://github.com/Anaconda-Platform/anaconda-project> "Anaconda Project"
-[CoCalc]: <https://cocalc.com> "CoCalc: Collaborative Calculation and Data Science"
-[Conda]: <https://docs.conda.io/en/latest/> "Conda: Package, dependency and environment management for any language—Python, R, Ruby, Lua, Scala, Java, JavaScript, C/ C++, FORTRAN, and more."
-[GitHub CI]: <https://docs.github.com/en/actions/guides/about-continuous-integration> "GitHub CI"
-[GitHub]: <https://github.com> "GitHub"
-[GitLab]: <https://gitlab.com> "GitLab"
-[Git]: <https://git-scm.com> "Git"
-[Heptapod]: <https://heptapod.net> "Heptapod: is a community driven effort to bring Mercurial SCM support to GitLab"
-[Jupyter]: <https://jupyter.org> "Jupyter"
-[Jupytext]: <https://jupytext.readthedocs.io> "Jupyter Notebooks as Markdown Documents, Julia, Python or R Scripts"
-[LGTM]: <https://lgtm.com/> "Continuous security analysis: A code analysis platform for finding zero-days and preventing critical vulnerabilities"
-[Mercurial]: <https://www.mercurial-scm.org> "Mercurial"
-[Miniconda]: <https://docs.conda.io/en/latest/miniconda.html> "Miniconda is a free minimal installer for conda."
-[MyST]: <https://myst-parser.readthedocs.io/en/latest/> "MyST - Markedly Structured Text"
-[Read the Docs]: <https://readthedocs.org> "Read the Docs homepage"
-[WSU Physics]: <https://physics.wsu.edu> "WSU Department of Physics and Astronomy"
-[WSU Mathematics]: <https://www.math.wsu.edu/> "WSU Department of Mathematics and Statistics"
-[`anaconda-project`]: <https://anaconda-project.readthedocs.io> "Anaconda Project: Tool for encapsulating, running, and reproducing data science projects."
-[`anybadge`]: <https://github.com/jongracecox/anybadge> "Python project for generating badges for your projects"
-[`conda-forge`]: <https://conda-forge.org/> "A community-led collection of recipes, build infrastructure and distributions for the conda package manager."
-[`genbadge`]: <https://smarie.github.io/python-genbadge/> "Generate badges for tools that do not provide one."
-[`mmf-setup`]: <https://pypi.org/project/mmf-setup/> "PyPI mmf-setup page"
-[`pytest`]: <https://docs.pytest.org> "pytest: helps you write better programs"
-[hg-git]: <https://hg-git.github.io> "The Hg-Git mercurial plugin"
-[GitLab test coverage visualization]: <https://docs.gitlab.com/ee/user/project/merge_requests/test_coverage_visualization.html>
-
-
-
-[Official Course Repository]: <https://gitlab.com/wsu-courses/iscimath-583-learning-from-images-and-signals> "Official Course Repository hosted on GitLab"
-[Shared CoCalc Project]: <https://cocalc.com/5111388d-0811-49c4-9cb9-223049d52da7/> "Shared CoCalc Project"
-[WSU Courses CoCalc project]: <https://cocalc.com/projects/c31d20a3-b0af-4bf7-a951-aa93a64395f6>
-
-
-[GitHub Mirror]: <https://github.com/WSU-Physics-Courses/iscimath-583-learning-from-images-and-signals> "GitHub mirror"
-[GitLab public repo]: <https://gitlab.com/wsu-courses/iscimath-583-learning-from-images-and-signals> "GitLab public repository."
-[Gitlab private resources repo]: <https://gitlab.com/wsu-courses/iscimath-583-learning-from-images-and-signals_resources> "Private resources repository."
-[file an issue]: <https://gitlab.com/wsu-courses/iscimath-583-learning-from-images-and-signals/-/issues> "Issues on the GitLab project."
 
 <!-- End Links -->
+
+
+[ANACONDA PROJECT]: https://github.com/Anaconda-Platform/anaconda-project 'Anaconda Project'
+[COCALC]: https://cocalc.com 'CoCalc: Collaborative Calculation and Data Science'
+[CONDA]: https://docs.conda.io/en/latest/ 'Conda: Package, dependency and environment management for any language—Python, R, Ruby, Lua, Scala, Java, JavaScript, C/ C++, FORTRAN, and more.'
+[GITHUB CI]: https://docs.github.com/en/actions/guides/about-continuous-integration 'GitHub CI'
+[GITHUB]: https://github.com 'GitHub'
+[GITLAB]: https://gitlab.com 'GitLab'
+[GIT]: https://git-scm.com 'Git'
+[HEPTAPOD]: https://heptapod.net 'Heptapod: is a community driven effort to bring Mercurial SCM support to GitLab'
+[JUPYTER]: https://jupyter.org 'Jupyter'
+[JUPYTEXT]: https://jupytext.readthedocs.io 'Jupyter Notebooks as Markdown Documents, Julia, Python or R Scripts'
+[LGTM]: https://lgtm.com/ 'Continuous security analysis: A code analysis platform for finding zero-days and preventing critical vulnerabilities'
+[MERCURIAL]: https://www.mercurial-scm.org 'Mercurial'
+[MINICONDA]: https://docs.conda.io/en/latest/miniconda.html 'Miniconda is a free minimal installer for conda.'
+[MYST]: https://myst-parser.readthedocs.io/en/latest/ 'MyST - Markedly Structured Text'
+[READ THE DOCS]: https://readthedocs.org 'Read the Docs homepage'
+[WSU PHYSICS]: https://physics.wsu.edu 'WSU Department of Physics and Astronomy'
+[WSU MATHEMATICS]: https://www.math.wsu.edu/ 'WSU Department of Mathematics and Statistics'
+[`ANACONDA-PROJECT`]: https://anaconda-project.readthedocs.io 'Anaconda Project: Tool for encapsulating, running, and reproducing data science projects.'
+[`ANYBADGE`]: https://github.com/jongracecox/anybadge 'Python project for generating badges for your projects'
+[`CONDA-FORGE`]: https://conda-forge.org/ 'A community-led collection of recipes, build infrastructure and distributions for the conda package manager.'
+[`GENBADGE`]: https://smarie.github.io/python-genbadge/ 'Generate badges for tools that do not provide one.'
+[`MMF-SETUP`]: https://pypi.org/project/mmf-setup/ 'PyPI mmf-setup page'
+[`PYTEST`]: https://docs.pytest.org 'pytest: helps you write better programs'
+[HG-GIT]: https://hg-git.github.io 'The Hg-Git mercurial plugin'
+[GITLAB TEST COVERAGE VISUALIZATION]: https://docs.gitlab.com/ee/user/project/merge_requests/test_coverage_visualization.html
+[OFFICIAL COURSE REPOSITORY]: https://gitlab.com/wsu-courses/iscimath-583-learning-from-images-and-signals 'Official Course Repository hosted on GitLab'
+[SHARED COCALC PROJECT]: https://cocalc.com/5111388d-0811-49c4-9cb9-223049d52da7/ 'Shared CoCalc Project'
+[WSU COURSES COCALC PROJECT]: https://cocalc.com/projects/c31d20a3-b0af-4bf7-a951-aa93a64395f6
+[GITHUB MIRROR]: https://github.com/WSU-Physics-Courses/iscimath-583-learning-from-images-and-signals 'GitHub mirror'
+[GITLAB PUBLIC REPO]: https://gitlab.com/wsu-courses/iscimath-583-learning-from-images-and-signals 'GitLab public repository.'
+[GITLAB PRIVATE RESOURCES REPO]: https://gitlab.com/wsu-courses/iscimath-583-learning-from-images-and-signals_resources 'Private resources repository.'
+[FILE AN ISSUE]: https://gitlab.com/wsu-courses/iscimath-583-learning-from-images-and-signals/-/issues 'Issues on the GitLab project.'

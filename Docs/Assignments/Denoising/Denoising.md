@@ -9,10 +9,7 @@ jupytext:
 kernelspec:
   display_name: Python 3 (math-583)
   language: python
-  metadata:
-    debugger: true
   name: math-583
-  resource_dir: /home/user/.local/share/jupyter/kernels/math-583
 ---
 
 ```{code-cell} ipython3
@@ -43,6 +40,7 @@ import logging; logging.getLogger('PIL').setLevel(logging.ERROR)  # Suppress PIL
 ```
 
 # Denoising
+
 $$\newcommand{\vect}[1]{\vec{\boldsymbol{#1}}}
 \newcommand{\uvect}[1]{\hat{\boldsymbol{#1}}}
 \newcommand{\abs}[1]{\lvert#1\rvert}
@@ -90,6 +88,7 @@ Given some data $d$ obtained by adding noise to an original image $u_0$, how can
   d = u + \eta, \qquad
   \eta \sim \mathcal{N}(0, \sigma),
 \end{gather}
+
 where $\eta$ is (approximately) gaussian noise with standard deviation $\eta$.
 
 We call $E[u]$ the "energy", and in the following, normalize it by $E[d]$ so that the noisy image has energy $E[d]=1$.
@@ -208,7 +207,7 @@ from ipywidgets import interact
 
 d2u = laplacian(u_exact)
 
-@interact(p=(0, 50, 1))
+#@interact(p=(0, 50, 1))
 def go(p=10):
     "Explore percentile thresholding of laplacian"
     fig, axs = plt.subplots(1, 2)
@@ -225,6 +224,7 @@ We will minimize
   f(y) = E[u] = \int\abs{\vect{\nabla} u}^2 + \lambda \int \abs{u - d}^2,\\
   f'(y) = dE(u) = \frac{\partial E}{\partial{u}} = 2\Bigl(-\nabla^2u + \lambda (u-d)\Bigr) = 0,
 \end{gather}
+
 where $d\equiv$`u_noise` is the **data**, or the noisy image. We can do this with a
 direct gradient descent:
 
@@ -392,6 +392,82 @@ plt.close('all')
 * Express the minimization problem in terms of a Bayesian problem.  How does the truncation of the errors alter this analysis?
 
 +++
+
+## Fourier Techniques
+
++++
+
+Here we try to directly implement the Fourier inversion technique discussed in class.
+
+```{code-cell} ipython3
+%matplotlib inline
+from IPython.display import clear_output
+import numpy as np, matplotlib.pyplot as plt
+import denoise
+
+sigma = 0.4
+lam = 0.1
+
+im = denoise.Image()
+d = denoise.Denoise(image=im, sigma=sigma, lam=lam)
+
+Nx, Ny = im.shape
+dx = dy = 1.0
+x = (np.arange(Nx) * dx)[:, None]
+y = (np.arange(Ny) * dy)[None, :]
+kx = 2 * np.pi * np.fft.fftfreq(Nx, dx)[:, None]
+ky = 2 * np.pi * np.fft.fftfreq(Ny, dy)[None, :]
+
+fft, ifft = np.fft.fftn, np.fft.ifftn
+
+u = ifft(lam * fft(d.u_noise) / (lam + (kx**2 + ky**2)))
+assert np.allclose(u.imag, 0)
+u_fft = u.real
+u_solve = d.minimize(d.u_noise)
+
+clear_output()
+data = [
+    ("Original", d.u_exact),
+    ("Noise", d.u_noise),
+    ("FFT", u_fft),
+    ("Minimize", u_solve),
+]
+fig, axs = denoise.subplots(len(data))
+for ax, (title, u) in zip(axs, data):
+    im.show(u, ax=ax)
+    ax.set(title=title)
+```
+
+```{code-cell} ipython3
+# Here is an interactive version
+
+from ipywidgets import interact
+
+#@interact(sigma=(0.0, 2.0), log_lam=(-10.0, 1.0))
+def go(sigma=0.4, log_lam=-1):
+    lam = 10**(log_lam)
+    im = denoise.Image()
+    d = denoise.Denoise(image=im, sigma=sigma, lam=lam, mode="wrap")
+
+    Nx, Ny = im.shape
+    dx = dy = 1.0
+    x = (np.arange(Nx) * dx)[:, None]
+    y = (np.arange(Ny) * dy)[None, :]
+    kx = 2 * np.pi * np.fft.fftfreq(Nx, dx)[:, None]
+    ky = 2 * np.pi * np.fft.fftfreq(Ny, dy)[None, :]
+
+    fft, ifft = np.fft.fftn, np.fft.ifftn
+
+    u = ifft(lam * fft(d.u_noise) / (lam + (kx**2 + ky**2)))
+    assert np.allclose(u.imag, 0)
+    u_fft = u.real
+
+    data = [("Original", d.u_exact), ("Noise", d.u_noise), ("FFT", u_fft)]
+    fig, axs = denoise.subplots(len(data), height=4)
+    for ax, (title, u) in zip(axs, data):
+        im.show(u, ax=ax)
+        ax.set(title=title)
+```
 
 ## Source Code
 

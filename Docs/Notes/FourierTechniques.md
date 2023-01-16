@@ -148,6 +148,7 @@ returned by {py:func}`numpy.fft.fftfreq` for example are given by the code
 ```python
 f_n = ((np.arange(N) / N + 0.5) % 1 - 0.5)/dx
 ```
+
 ```{code-cell}
 :tags: [hide-cell]
 
