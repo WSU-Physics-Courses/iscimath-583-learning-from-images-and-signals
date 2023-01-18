@@ -58,7 +58,6 @@ for a $14 student license for the term: this is probably the most cost effective
 you want to purchase a license for the year.  If you already have a license, you are
 free to use that.
 
-
 ```{toctree}
 ---
 maxdepth: 2
@@ -68,6 +67,7 @@ hidden:
 glob:
 ---
 Syllabus
+Code
 Assignments
 Notes/*
 

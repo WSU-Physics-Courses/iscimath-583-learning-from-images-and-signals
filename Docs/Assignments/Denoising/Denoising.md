@@ -375,8 +375,8 @@ for label, u, ax in [("Original", d.u_exact, axs[0]),
 
 display(fig)
 for lam, ax in zip(lams, axs[1:-1]):
-    d = denoise.Denoise(image=im, sigma=sigma, lam=lam)
-    u = d.minimize(callback=True, plot=False)
+    d = denoise.Denoise(image=im, sigma=sigma, lam=lam, mode="wrap")
+    u = d.solve()
     im.show(u, ax=ax)
     ax.set(title=f"{lam=:.2g}, E={d.get_energy(u):.2g}")
     clear_output(wait=True)
@@ -386,10 +386,11 @@ plt.close('all')
 
 ### Ideas to Explore
 
-+++
-
-* From the previous figure, it is clear that the parameter $\lambda$ somehow controls the "energy".  Can you make this dependence explicit (using properties of both $u_0=$`u_exact` and $d=$`u_noise`).
-* Express the minimization problem in terms of a Bayesian problem.  How does the truncation of the errors alter this analysis?
+* From the previous figure, it is clear that the parameter $\lambda$ somehow controls
+  the "energy".  Can you make this dependence explicit (using properties of both
+  $u_0=$`u_exact` and $d=$`u_noise`).
+* Express the minimization problem in terms of a Bayesian problem.  How does the
+  truncation of the errors alter this analysis? 
 
 +++
 

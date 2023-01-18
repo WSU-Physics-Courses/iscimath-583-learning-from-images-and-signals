@@ -109,6 +109,10 @@ autosummary_generate_overwrite = False
 autosummary_imported_members = False
 add_module_names = False
 
+autodoc_default_options = {
+    "member-order": "bysource",
+}
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
 

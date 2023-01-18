@@ -401,6 +401,7 @@ If your signal processing algorithm can be expressed as a [Topelitz][] matrix, t
 Fourier techniques provide a simple way of exactly solving the problem (up to round-off
 errors) as the matrix will be diagonal in Fourier space.
 
+(sec:FT-product)=
 ### Product rule
 
 It is important to note that the [product rule][] -- an important mathematical identity
