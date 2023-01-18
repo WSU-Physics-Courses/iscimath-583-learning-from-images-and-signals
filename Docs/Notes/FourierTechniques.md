@@ -138,7 +138,7 @@ then taking the appropriate continuum ($N\rightarrow \infty$) or thermodynamic (
   \begin{aligned}
     x_{n} &= n \d{x} \in [0, L) \mod L, &
     \d{x} &= \frac{L}{N},\\
-    k_{n} &= n\d{k} \in \Bigl[\frac{\pi}{\d{x}}, \frac{\pi}{\d{x}}\Bigr) \mod \frac{2\pi}{\d{x}}, &
+    k_{n} &= n\d{k} \in \Bigl[-\frac{\pi}{\d{x}}, \frac{\pi}{\d{x}}\Bigr) \mod \frac{2\pi}{\d{x}}, &
     \d{k} &= \frac{2\pi}{L}.
   \end{aligned}
 \end{gather*}
@@ -397,7 +397,7 @@ Fourier transform of the [Toeplitz][] matrix, and then take the inverse transfor
 \end{gather*}
 etc.
 
-If your signal processing algorithm can be expressed as a [Topelitz][] matrix, then
+If your signal processing algorithm can be expressed as a [Toeplitz][] matrix, then
 Fourier techniques provide a simple way of exactly solving the problem (up to round-off
 errors) as the matrix will be diagonal in Fourier space.
 
@@ -472,7 +472,6 @@ periodic box of length $L = N \d{x}$.  As a test function, consider:
 \end{align*}
 where $k = 2\pi n/L$ is one of the lattice momenta to ensure that the function has
 appropriate periodicity:
-
 ```{code-cell}
 :tags: [hide-input]
 
@@ -773,3 +772,4 @@ discussed on the [DFT][] page.  For example:
 [analytic function]: <https://en.wikipedia.org/wiki/Analytic_function>
 [ringing artifacts]: <https://en.wikipedia.org/wiki/Ringing_artifacts>
 [broadcasting]: <https://numpy.org/doc/stable/user/basics.broadcasting.html>
+
