@@ -472,6 +472,7 @@ periodic box of length $L = N \d{x}$.  As a test function, consider:
 \end{align*}
 where $k = 2\pi n/L$ is one of the lattice momenta to ensure that the function has
 appropriate periodicity:
+
 ```{code-cell}
 :tags: [hide-input]
 
@@ -772,4 +773,3 @@ discussed on the [DFT][] page.  For example:
 [analytic function]: <https://en.wikipedia.org/wiki/Analytic_function>
 [ringing artifacts]: <https://en.wikipedia.org/wiki/Ringing_artifacts>
 [broadcasting]: <https://numpy.org/doc/stable/user/basics.broadcasting.html>
-

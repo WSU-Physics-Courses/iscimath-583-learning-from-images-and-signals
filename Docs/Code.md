@@ -69,7 +69,3 @@ minimization condition using {ref}`sec:FourierTechniques`.
 .. automodule:: math_583.denoise
     :members:
 ```
-
-
-
-

@@ -12,7 +12,7 @@ kernelspec:
   name: math-583
 ---
 
-```{code-cell} ipython3
+```{code-cell}
 :hide-cell: null
 
 import mmf_setup;mmf_setup.nbinit()
@@ -90,7 +90,7 @@ of the document contains information about the kernel that should be used etc.  
 are parsed using [MyST-NB] and the output of cells will be displayed.  For example, here
 is a plot demonstrating [Liouville's Theorem].
 
-```{code-cell} ipython3
+```{code-cell}
 :tags: [hide-input, full-width]
 
 plt.rcParams['figure.dpi'] = 300
@@ -216,7 +216,7 @@ If you want some of your notebooks to also be useful as stand-alone demonstratio
 you might be tempted to include features like [IPyWidgets][].  This requires some work
 to build properly:
 
-```{code-cell} ipython3
+```{code-cell}
 from ipywidgets import interact
 
 @interact

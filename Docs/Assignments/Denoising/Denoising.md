@@ -390,7 +390,7 @@ plt.close('all')
   the "energy".  Can you make this dependence explicit (using properties of both
   $u_0=$`u_exact` and $d=$`u_noise`).
 * Express the minimization problem in terms of a Bayesian problem.  How does the
-  truncation of the errors alter this analysis? 
+  truncation of the errors alter this analysis?
 
 +++
 
