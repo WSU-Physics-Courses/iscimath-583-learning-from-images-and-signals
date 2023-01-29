@@ -12,9 +12,8 @@ kernelspec:
   metadata:
     debugger: true
   name: math-583
-  resource_dir: /home/user/.local/share/jupyter/kernels/math-583
+  resource_dir: /home/user/.local/share/jupyter/kernels/math-58
 ---
-
 ```{code-cell}
 :tags: [hide-cell]
 
@@ -117,9 +116,8 @@ The first term $-\log P(u)$ is called the *prior* on $u$ and can act as either a
 
 If we assume that our random variables are normally distributed we can write:
 
-
 $$P(f|u) = \frac{1}{\sqrt{2\pi}\sigma}e^{- \frac{||u-f||^2}{2\sigma^2}}$$
-  
+
 $$P(u) = \frac{1}{\sqrt{2\pi}\tau}e^{-\frac{||Lu||^2}{2\tau^2}}$$
 
 Where $\sigma^2 > 0$ and $\tau^2 > 0$ are the variance of the two distributions. Plugging these in our problem becomes to find the $u$ that satisfies:
@@ -175,6 +173,113 @@ We will often use variational methods in image processing; the Calculus of Varia
 
 The typical problem is to find a $u$ that yields:
 
-$$\inf_{u \in V} I(u)$$
+$$\inf_{u \in V} F(u)$$
 
-Where $I(u) = \int_\Omega f(x,u(x),\nabla u(x))dx$, $\Omega \subset \mathbb{R}^N$ is bounded, $V$ is some specified set of admissible functions (often a Banach space), and $f(x,u,\xi)$ is given.
+Where $F(u) = \int_\Omega f(x,u(x),\nabla u(x))dx$, $\Omega \subset \mathbb{R}^N$ is bounded, $V$ is some specified set of admissible functions (often a Banach space), and $f(x,u,\xi)$ is given.
+
+## Gradient Descent
+
+If we want to minimize some differentiable function $F$, we can employ gradient descent to try to approximate the stationary points of $F$ (points where $\nabla F = 0$). If $F$ is convex, then any stationary point is a global minimizer.
+
+If we are minimizing $F(u)$ over the vector space $u \in X$ then we can introduce a paramaterization. Let $u_0 \in X$ and let $u(t) \in X$ for $t \geq 0$ satisfy the initial value problem:
+
+$$u(0) = u_0$$
+
+$$\frac{du}{dt} = -\nabla F(u(t)), \text{ for } t > 0$$
+
+In other words, $u(t)$ starts at some initial point in the input space $u_0$, and then travels in the direction of fastest decrease for $F$. As $t$ increases, $F(u(t))$ will decrease, as:
+
+\begin{align*}
+\frac{d}{dt}F(u(t)) &= \nabla F(u(t)) \frac{du}{dt}\\
+&= -\|\nabla F(u(t))\|^2\\
+&\leq 0
+\end{align*}
+
+In the discrete approximation we define a time step $\Delta t > 0$ and define $u^n = u(n\Delta t)$ for $n = 0,1,2,...$
+
+Applying the forward Euler method to our initial value problem starts with $u^0 = u_0$ and evolves like:
+
+$$u^{n+1} = u^n - \Delta t \nabla F(u^n)$$
+
+Since this is only an approximation, we should check to see that unless a steady state is reached or $\nabla F(u^n) = 0$ that the inequality:
+
+$$F(u^{n+1}) < F(u^n)$$
+
+Is satisfied, and if it's not we need to decrease $\Delta t$ and take smaller steps.
+
+It should be noted that if $f$ is convex and $\nabla F$ is Lipschitz continuous with Lipschitz constant $L$ then with $k$ iterations with the fixed step size $\Delta t < \frac{1}{L}$ then:
+
+$$F(u^k) - F(u^*) \leq \frac{\|x^0-x^*\|^2}{2k\Delta t }$$
+
+Where $u^* = \argmin_u F(u)$; i.e. under these conditions gradient descent is guaranteed to converge and it converges at a rate of $O(1/k)$.
+
+## Finite Differences
+
+Finite difference methods are ways to approximate functions and their derivatives to solve differential equations. Such formulas are derived using Taylor's formula.
+
+If $u$ is a one dimensional function with $u:[a,b] \to \mathbb{R}$ then we can discretize $[a,b]$ into a sequence of $M$ points: $x_0 = a$, $x_1 = x_0 + \Delta x$, $x_2 = x_0 + 2\Delta x, \cdots, x_0 + M\Delta x, x_0 + (M+1)\Delta x = b$ so that $\Delta x = \frac{b-a}{M+1}$.
+
+For ease of notation, denote $u_j$ by $u(x_j)$. If $u \in C^2[a,b]$ on the interval $[a,b]$ then we can approximate its derivative at $x_j$ by:
+
+$$u'(x_j) \approx \frac{u_{j+1}-u_j}{\Delta x}, j = 0,...,M$$
+
+This is simply the slope of the line joining the points $(x_j,u_j)$ and $(x_{j+1},u_{j+1})$ and serves as a linear approximation to the derivative of $f$. This approximation has error $O(\Delta x) = -\frac{\Delta x}{2}u''(\xi)$ for some $x_j \leq \xi \leq x_{j+1}$.
+
+We can also approximate backwards:
+
+$$u'(x_j) \approx \frac{u_{j}-u_{j-1}}{\Delta x}, j = 1,...,M+1 $$
+
+If $u \in C^3[a,b]$ then the second order central finite difference is given by:
+
+$$u'(x_j) \approx \frac{u_{j+1}-u_{j-1}}{2\Delta x}, j = 1,...,M$$
+
+With error $O(\Delta x^2) = -\frac{\Delta x^2}{6}u''(\xi)$ for some $x_{j-1} \leq \xi \leq x_{j+1}$.
+
+If $u \in C^4[a,b]$ we can approximate its second derivative by the second order central finite difference:
+
+$$u''(x_j) \approx \frac{u_{j+1}-2u_j+u_{j-1}}{\Delta x^2}, j = 1,...,M$$
+
+With error $O(\Delta x^2) = - \frac{\Delta x^2}{12}u^{(4)}(\xi)$, $x_{j-1} \leq \xi \leq x_{j+1}$.
+
+In two dimensions, the formulation is similar. Let $u:[a,b]\times[c,d]\to \mathbb{R}$ and partition each interval by step sizes $\Delta x = \frac{b-a}{n}$ and $\Delta y = \frac{d-c}{m}$. If we draw vertical (for $x$) and horizontal (for $y$) lines at $x_i = a + i\Delta x$ and $y_j = c + j\Delta y$ for $i=0,...,n$ and $j = 0,...,m$ then we have a grid over our domain. The points where two grid lines intersect are called the mesh points of the grid.
+
+By the above, we have for second order central difference approximations:
+
+\begin{align*}
+\frac{\partial F}{\partial x}(x_i,y_j) \approx \frac{F(x_{i+1},y_j)-F(x_{i-1},y_j)}{2\Delta x}\\
+\frac{\partial F}{\partial y}(x_i,y_j) \approx \frac{F(x_{i},y_{j+1})-F(x_{i},y_{j-1})}{2\Delta y}
+\end{align*}
+
+\begin{align*}
+\frac{\partial^2F}{\partial x^2}(x_i,y_j) &\approx \frac{F(x_{i+1},y_j)-2F(x_i,y_j)+F(x_{i-1},y_j)}{\Delta x^2}\\
+\frac{\partial^2F}{\partial y^2}(x_i,y_j) &\approx \frac{F(x_i,y_{j+1})-2F(x_i,y_j)+F(x_i,y_{j-1})}{\Delta y^2}
+\end{align*}
+
+With the obvious errors from the 1-d case.
+
+## Too much smoothing?
+
+We have thus developed a theory that allows us to find a denoised image by minimizing:
+
+$$F(u) = \|Ku-f\| + \|\Gamma u\|^2$$
+
+But which norms shall we use? Our functions presumably come from Sobolev space:
+
+$$W^{1,2}(\Omega) := \{u \in L^2(\Omega), \nabla u \in L^2(\Omega)^2\}$$
+
+Since our images often have sharp borders and thus would have discontinuous gradients. It would then be natural to use the gradient of $u$ and the L^2 norm and minimize:
+
+$$F(u) = \int_\Omega |ku-f|dx + \lambda \int_\Omega |\nabla u|^2 dx$$
+
+The above does work, and we can often find unique solutions characterized by the Euler-Lagrange equation:
+
+$$K^*Ku-K^*f-\lambda \Delta u=0$$
+
+But in practice the Laplacian operator $\Delta$ is simply too strong in the sense that it over smoothes images. The $L^2$ norm of the gradient destroys edges too much. Instead, we may then opt to use the $L^1$ norm of the gradient of $u$ which is  called the total variation. We will now then refer to the "Energy" of the system as:
+
+$$E(u) = \frac{1}{2}\int_\Omega |Ku-f|^2dx + \lambda \int_\Omega \phi(|\nabla u|)dx$$
+
+Where $\phi$ is a strictly convex, nondecreasing function with $\phi(0) = 0$ and $\lim_{s \to \infty} \phi(s) = \infty$ (at linear speed). (These conditions allow us to use the direct method of the calculus of variations). This formulation preserves discontinuities in the sense that the solution to our minimization problem will be a piecewise constant image made up of homogeneous regions separated by sharp edges. In other words, it allows for edge-preserving smoothing. The specific choice of $\phi$ determines the smoothness.
+
+If $K$ is then presumed to be a linear continuous operator we can guarantee a unique solution in a weak sense.
+

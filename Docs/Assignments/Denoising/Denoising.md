@@ -9,7 +9,10 @@ jupytext:
 kernelspec:
   display_name: Python 3 (math-583)
   language: python
+  metadata:
+    debugger: true
   name: math-583
+  resource_dir: /home/user/.local/share/jupyter/kernels/math-583
 ---
 
 ```{code-cell} ipython3
