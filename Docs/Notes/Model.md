@@ -12,7 +12,7 @@ kernelspec:
   metadata:
     debugger: true
   name: math-583
-  resource_dir: /home/user/.local/share/jupyter/kernels/math-58
+  resource_dir: /home/user/.local/share/jupyter/kernels/math-5
 ---
 ```{code-cell}
 :tags: [hide-cell]
@@ -44,7 +44,7 @@ The number of quantized intensity levels will then be a fixed finite number $L$ 
 
 Images are susceptible to noise or other imperfections that may degrade the information they contain. Thus arises the need for pre-processing to remove or reduce artificial noise and restore the image. In this course we will explore some basic methods of denoising, deblurring, and inpainting (filling in missing information). Implementing these methods often comes down to solving inverse problems.
 
-## Inverse Problems
+### Inverse Problems
 
 Solving an inverse problem is tantamount to analyzing observations and calculating to the best of our ability the factors that caused them. Inverse problems are said to be *well-posed* if:
 
@@ -54,7 +54,7 @@ Solving an inverse problem is tantamount to analyzing observations and calculati
 
 The third condition ensures that small deviations in measurement do not lead to very different outcomes in our solution. When such problems are well-posed, they are often amenable to being solved by computer algorithms. If an inverse problem is not well posed, we made need to tweak it before we can employ numerical techniques - we will often use regularization methods to make such tweaks.
 
-## Ridge Regression
+### Ridge Regression
 
 Ridge regression, also known as Tikhonov regularization, is one particular method of regularizing ill-posed problems.
 
@@ -96,7 +96,7 @@ Often is is useful to make $\Gamma$ a high-pass operator such as the gradient, L
 
 $$\hat{u} = (K^*K + \Gamma^*\Gamma)^{-1}K^*f$$
 
-## Getting a Handle on Noise
+### Getting a Handle on Noise
 
 All that we have done so far would be sufficient if we knew the exact degradration process $K$. Often though we're simply given an already degraded image and asked to clean it up. Suppose this is the case; we are given a noisy image and asked to denoise it to the best of our abilities. If we assume that the noise is distributed across the image according to some underlying probability desnsity function, we may then view $f$ and $u$ as random variables and make a *maximum a posteriori probability estimate* of $u$. This is a fancy way to say that we would like to find the most likely value of $u$ given $f$ and is expressed as:
 
@@ -130,7 +130,7 @@ $$\arg \min_u \|u-f\|^2 + \lambda\|Lu\|^2$$
 
 Which is a special case of ridge regression with $K = I$.
 
-## Blur and Convolutions
+### Blur and Convolutions
 
 In image processing it is useful to model blurring, either as an effect we would like to add to or remove from an image. To do this we calculate the *convolution* of a true/sharp image $u$ with a function $k$ (called the kernel or point spread function). The convolution of $k$ and $u$ is denoted:
 
@@ -146,7 +146,7 @@ $$f*h = \frac{1}{MN}\sum_{m=0}^{M-1}\sum_{n=0}^{N-1} k(x-m,y-n)f(m,n)$$
 
 The convolution is commutative $k*u = u*k$, associative $(k*u)*v = k*(u*v)$, and for translation by $\tau$ we have $\tau(k*u) = (\tau k)*u = k*(\tau u)$.
 
-## Filtering and Fourier Transforms
+### Filtering and Fourier Transforms
 
 Often we find the need to filter an image to remove noise or enhance certain features (sharpening, smoothing, etc.) and in doing so we often employ the Fourier transform. The Fourier transform takes a function and decomposes it into its frequency components. Applying the Fourier transform to a function of time yields a function of temporal frequency and transforming a function of space will output a function of spatial frequency.
 
@@ -167,7 +167,7 @@ And we have that if both $u$ and its Fourier transform have finite integrals, th
 
 For ease of notation, we may denote the Fourier transform of $u$ by $\hat{u}$ and the inverse Fourier transform by $\check{u}$.
 
-## Calculus of Variations
+### Calculus of Variations
 
 We will often use variational methods in image processing; the Calculus of Variations is a field of analysis that uses small perturbations in functions to find their extrema. A common type of function to analyze with this field is called a functional, which we take to be a map from some set of functions to the real numbers (and often in the form of a definite integral).
 
@@ -177,7 +177,7 @@ $$\inf_{u \in V} F(u)$$
 
 Where $F(u) = \int_\Omega f(x,u(x),\nabla u(x))dx$, $\Omega \subset \mathbb{R}^N$ is bounded, $V$ is some specified set of admissible functions (often a Banach space), and $f(x,u,\xi)$ is given.
 
-## Gradient Descent
+### Gradient Descent
 
 If we want to minimize some differentiable function $F$, we can employ gradient descent to try to approximate the stationary points of $F$ (points where $\nabla F = 0$). If $F$ is convex, then any stationary point is a global minimizer.
 
@@ -211,9 +211,9 @@ It should be noted that if $f$ is convex and $\nabla F$ is Lipschitz continuous 
 
 $$F(u^k) - F(u^*) \leq \frac{\|x^0-x^*\|^2}{2k\Delta t }$$
 
-Where $u^* = \argmin_u F(u)$; i.e. under these conditions gradient descent is guaranteed to converge and it converges at a rate of $O(1/k)$.
+Where $u^* = \arg \min_u F(u)$; i.e. under these conditions gradient descent is guaranteed to converge and it converges at a rate of $O(1/k)$.
 
-## Finite Differences
+### Finite Differences
 
 Finite difference methods are ways to approximate functions and their derivatives to solve differential equations. Such formulas are derived using Taylor's formula.
 
@@ -257,7 +257,7 @@ By the above, we have for second order central difference approximations:
 
 With the obvious errors from the 1-d case.
 
-## Too much smoothing?
+### Reducing the smoothing effect
 
 We have thus developed a theory that allows us to find a denoised image by minimizing:
 
@@ -282,4 +282,30 @@ $$E(u) = \frac{1}{2}\int_\Omega |Ku-f|^2dx + \lambda \int_\Omega \phi(|\nabla u|
 Where $\phi$ is a strictly convex, nondecreasing function with $\phi(0) = 0$ and $\lim_{s \to \infty} \phi(s) = \infty$ (at linear speed). (These conditions allow us to use the direct method of the calculus of variations). This formulation preserves discontinuities in the sense that the solution to our minimization problem will be a piecewise constant image made up of homogeneous regions separated by sharp edges. In other words, it allows for edge-preserving smoothing. The specific choice of $\phi$ determines the smoothness.
 
 If $K$ is then presumed to be a linear continuous operator we can guarantee a unique solution in a weak sense.
+
+## Part 1: Removing Normally Distributed Noise
+
+Suppose that we are given a noisy image $f$ that is the result of adding normally distributed noise $\eta$ to some original image $u$. That is, $f = u + \eta$ where $\eta \sim \mathcal{N}(0,\sigma)$.
+
+We can approximate $u$ by finding the minimizer of the simple energy functional:
+
+$$E(u) = \|u-f\| + \lambda \|\nabla u\|$$
+
+Which we will employ gradient descent to do. Pseudocode to restore the image is below; recall that to implement it on a real image you will need to import the file and convert it to a matrix of intensity values. Similarly, to display the restored image you will need to convert the matrix of intensities back into an image. To do this, we recommend PIL - the Python Imaging Library.
+
+```
+u = imported_original_image #mxn matrix
+eta = generated_gaussian_noise #mxn matrix
+f = u + eta
+x0 = f
+lam = 1 #change this as you like
+
+def E(u):
+    return norm(u-f)+lam*norm(grad(u))
+
+def dE(u):
+  return second_order_central_difference(u,E)
+
+u_restored = grad_descent(x0,E,dE)
+```
 
