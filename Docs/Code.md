@@ -112,11 +112,6 @@ derivative matrix as in the explicit formula.
 appropriate complex conjugations applied.*
 :::
 
-:::{admonition} Computing $\vect{\nabla}$ and $\nabla^2$.
-
-Hi
-:::
-
 A faster approach is provided by {meth}`Denoise.solve`, which directly solves the
 minimization condition using {ref}`sec:FourierTechniques`.
 

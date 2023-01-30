@@ -494,7 +494,7 @@ class Denoise(Base):
         u = self.unpack(y)
         E, E_r, E_f = self.get_energy(u, parts=True)
 
-        msg = f"E={E:.2g}, E_r={E_r:.2g}, E_f={E_f:.2g}"
+        msg = f"E={E:.4g}, E_r={E_r:.4g}, E_f={E_f:.4g}"
         if plot:
             import IPython.display
 
@@ -516,7 +516,9 @@ class Denoise(Base):
             u0 = self.u_noise
         y0 = self.pack(u0)
         if callback:
-            callback = partial(self.callback, plot=plot)
+            if callback is True:
+                callback = self.callback
+            callback = partial(callback, plot=plot)
         res = sp.optimize.minimize(
             self._f,
             x0=y0,
