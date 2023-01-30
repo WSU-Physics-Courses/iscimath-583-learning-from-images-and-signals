@@ -122,7 +122,7 @@ templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 # Cache notebook output to speed generation.
-# https://myst-nb.readthedocs.io/en/latest/use/execute.html
+# https://myst-nb.readthedocs.io/en/latest/computation/execute.html
 nb_execution_mode = "cache"
 nb_execution_allow_errors = True
 nb_execution_timeout = 300
