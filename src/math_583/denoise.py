@@ -329,7 +329,7 @@ class Denoise(Base):
                 backward=[-1, 1, 0],
                 centered=[-0.5, 0, 0.5],
             )
-            D1 = sp.sparse.lil_array(
+            D1 = sp.sparse.lil_matrix(
                 np.transpose(
                     [
                         sp.ndimage.correlate1d(

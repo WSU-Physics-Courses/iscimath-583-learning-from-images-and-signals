@@ -93,7 +93,7 @@ dependencies:
   - setuptools<58.0.2|>59
 
   # Core
-  - scipy
+  - scipy==1.7.1   # To match CoCalc Anaconda2021
   - scikit-image
   - sympy
   #- conda-forge::jupyter_console
