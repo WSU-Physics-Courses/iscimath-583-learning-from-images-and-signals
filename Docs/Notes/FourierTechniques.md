@@ -19,6 +19,11 @@ import mmf_setup;mmf_setup.nbinit()
 import logging;logging.getLogger('matplotlib').setLevel(logging.CRITICAL)
 %matplotlib inline
 import numpy as np, matplotlib.pyplot as plt
+try: 
+    from myst_nb import glue
+except ImportError: 
+    glue = None
+
 ```
 
 (sec:FourierTechniques)=
@@ -223,6 +228,64 @@ Thus, "in Fourier space", we have:
 \end{gather*}
 in the sense that the Fourier coefficients are multiplied by this factor $\tilde{f}_k \rightarrow \I
 k \tilde{f}_k$.
+
+::::{warning}
+:class: dropdown
+
+The factor of $\I = \sqrt{-1}$ in the odd derivatives can cause unexpected behavior if
+the number of lattice points is even.  These stem from the fact that there is only one
+$k=0$ momentum, while all others are paired $\pm 2\pi n/L$.  If the number of lattice
+points is even, there must therefore be an unpaired finite momentum.  This turns out to
+be $k_{N/2} = \pi N /L$, the momentum with highest magnitude in the space, corresponding
+to alternations between even and odd lattice.
+
+The subtle issue is that, if your function has any component with this momentum, then
+the derivative will be complex, **even if your function is real**.  This is common if
+your function contains any sharp features, as these will contain high-momentum
+components.
+
+:::{glue:figure} fig:even_odd
+:name: "fig:even-odd"
+
+Derivative of a sharply kinked function with an even and odd number of lattice points.
+Notice that with an even number of points there is a sizable imaginary component to the
+derivative $f'(x)$, even though the original function is real.
+:::
+
+One way to mitigate this is to set this component to zero when computing the
+derivative with code like `k[N//2] = 0`, but this has consequences.  For example, with
+denoising, doing this will prevent the code from being able to remove the
+highest-frequency noise, which might be exactly what one is trying to do!
+
+In our {ref}`sec:Code`, we keep this component internally, noting that at the end of the
+calculation it should be real.  For example, we never use the derivative explicitly, but
+use instead $E'[u] = -\vect{\nabla}\cdot(\vect{\nabla} u \cdots)$.  When we take the outer
+divergence, we obtain another factor of $\I k$, and the final function $E'[u]$ is real
+(if $u$ is real) as expected.
+
+To provide a nicer experience for users, however, we do take the real component in 
+{func}`math_583.denoise.Denoise.gradient` when called externally.
+::::
+```{code-cell}
+:tags: [hide-cell]
+
+from numpy.fft import fft, ifft
+fig, ax = plt.subplots(figsize=(8, 3))
+for n, N in enumerate([32, 33]):
+    L = 10.0
+    dx = L/N
+    x = (np.arange(N) - N//2) * dx
+    k = 2*np.pi * np.fft.fftfreq(N, dx)
+    f_x = np.exp(-abs(x))
+    df_x = ifft(1j*k * fft(f_x))
+    ax.plot(x, f_x, f"C{n}:", label=f"$f(x)$ (N={N})")
+    ax.plot(x, df_x.real, f"C{n}--", label=f"$\Re f'(x)$ (N={N})")
+    ax.plot(x, df_x.imag, f"C{n}-", label=f"$\Im f'(x)$ (N={N})")
+ax.legend(loc="lower left")
+ax.set(title=r"$f(x) = e^{-|x|}$", xlabel="$x$")
+if glue:
+    glue("fig:even_odd", fig)
+```
 
 We used this in our code to quickly implement the Laplacian operator for images
 \begin{gather*}

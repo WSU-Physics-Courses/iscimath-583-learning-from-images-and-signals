@@ -59,7 +59,7 @@ class TestDenoise:
         for u in [d.u_exact, d.u_noise]:
             du_mag1 = d.gradient_magnitude(u)
             du_mag2 = np.sqrt(d.gradient_magnitude2(u))
-            du_mag3 = np.sqrt(np.sum(abs(d.gradient(u)) ** 2, axis=0))
+            du_mag3 = np.sqrt(np.sum(abs(d.gradient(u, real=False)) ** 2, axis=0))
             assert np.allclose(du_mag1, du_mag2)
             assert np.allclose(du_mag1, du_mag3)
 

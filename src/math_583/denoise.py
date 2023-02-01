@@ -39,7 +39,7 @@ def subplots(cols=1, rows=1, height=3, aspect=1, **kw):
     **kw : dict
         Other arguments are passed to ``plt.subplot()``
     """
-    args = dict(figsize=(cols * height, rows * height))
+    args = dict(figsize=(cols * height * aspect, rows * height))
     args.update(kw)
     return plt.subplots(rows, cols, **args)
 
@@ -221,6 +221,8 @@ class Denoise(Base):
     eps_p, eps_q : float
         Regularization constants for the regularization term and the data fidelity terms
         respectively.
+    real : bool
+        If True, then some operations that might be complex will return real values.
     """
 
     lam = 1.0
@@ -232,7 +234,7 @@ class Denoise(Base):
     q = 2.0
     eps_p = np.finfo(float).eps
     eps_q = np.finfo(float).eps
-
+    real = True
     use_shortcuts = True
 
     def __init__(self, image=None, **kw):
@@ -291,8 +293,10 @@ class Denoise(Base):
         """Return the laplacian of u."""
         if self.mode == "periodic":
             res = self._ifft(-self._K2[self.mode] * self._fft(u))
-            assert np.allclose(0, res.imag)
-            return res.real
+            if np.isrealobj(u):
+                assert np.allclose(0, res.imag)
+                res = res.real
+            return res
         return sp.ndimage.laplace(u, mode=self.mode)
 
     def derivative1d(
@@ -373,7 +377,7 @@ class Denoise(Base):
             ut = self._fft(u)
             axes = range(1, 1 + len(u.shape))
             res = self._ifft([1j * _k * ut for _k in self._kxyz], axes=axes)
-            if real:
+            if real and np.isrealobj(u):
                 res = res.real
             return res
 
@@ -388,7 +392,9 @@ class Denoise(Base):
         if self.mode == "periodic":
             vt = self._fft(v, axes=range(1, len(v.shape)))
             res = self._ifft(sum(1j * _k * _vt for _k, _vt in zip(self._kxyz, vt)))
-            return res.real
+            if self.real:  # Can't check v here because it might be complex
+                res = res.real
+            return res
 
         return sum(
             self.derivative1d(v[_i], axis=_i, transpose=transpose)
@@ -406,7 +412,7 @@ class Denoise(Base):
 
     def gradient_magnitude2(self, u):
         """Return the square of the magnitude of the gradient of u."""
-        return (self.gradient(u) ** 2).sum(axis=0)
+        return (abs(self.gradient(u, real=False)) ** 2).sum(axis=0)
 
     def get_energy(self, u, parts=False, normalize=False):
         """Return the energy.
@@ -450,7 +456,7 @@ class Denoise(Base):
         if p == 2.0 and self.use_shortcuts:
             dE_regularization = -self.laplacian(u)
         else:
-            du = self.gradient(u)
+            du = self.gradient(u, real=False)
             dE_regularization = -self.divergence(
                 du * (self.gradient_magnitude2(u) + self.eps_p) ** ((p - 2) / 2)
             )
@@ -545,5 +551,7 @@ class Denoise(Base):
         if mode not in self._K2:
             raise NotImplementedError(f"{mode=} not in {set(self._K2)}")
         res = self._ifft(self._fft(self.u_noise) / (self._K2[mode] / self.lam + 1))
-        assert np.allclose(res.imag, 0)
-        return res.real
+        if np.isrealobj(self.u_noise):
+            assert np.allclose(res.imag, 0)
+            res = res.real
+        return res

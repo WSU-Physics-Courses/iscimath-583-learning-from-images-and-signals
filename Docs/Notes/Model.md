@@ -293,10 +293,24 @@ $$E(u) = \|u-f\| + \lambda \|\nabla u\|$$
 
 Which we will employ gradient descent to do. Pseudocode to restore the image is below; recall that to implement it on a real image you will need to import the file and convert it to a matrix of intensity values. Similarly, to display the restored image you will need to convert the matrix of intensities back into an image. To do this, we recommend PIL - the Python Imaging Library.
 
+```{code-cell}
+:tags: [hide-cell]
+
+from math_583 import denoise
+
+im = denoise.Image()
+d = denoise.Denoise(image=im, sigma=0.4)
+imported_original_image = d.u_exact
+noisy_image = d.u_noise
+
+def norm(u):
+    return np.sqrt((u**2).sum())
 ```
+```{code-cell}
 u = imported_original_image #mxn matrix
-eta = generated_gaussian_noise #mxn matrix
-f = u + eta
+# eta = generated_gaussian_noise #mxn matrix
+# f = u + eta
+f = noisy_image
 x0 = f
 lam = 1 #change this as you like
 

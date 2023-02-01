@@ -4,6 +4,7 @@ syntax:glob
 .venv/
 .coverage
 .pytest_cache/
+.nox/
 _data/
 _ext/
 _trash/

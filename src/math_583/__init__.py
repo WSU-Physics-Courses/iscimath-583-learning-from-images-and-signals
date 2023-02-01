@@ -6,4 +6,6 @@ Learning from Images and Signals: Theory and Computation at Washington State Uni
 """
 from . import denoise
 
-__all__ = ["denoise"]
+__version__ = "0.1.1"
+
+__all__ = ["denoise", "__version__"]
