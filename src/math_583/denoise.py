@@ -232,8 +232,11 @@ class Denoise(Base):
     seed = 2
     p = 2.0
     q = 2.0
-    eps_p = np.finfo(float).eps
-    eps_q = np.finfo(float).eps
+
+    # Compromise between performance and accuracy.
+    eps_p = 1e-6  # np.finfo(float).eps
+    eps_q = 1e-6  # np.finfo(float).eps
+
     real = True
     use_shortcuts = True
 
