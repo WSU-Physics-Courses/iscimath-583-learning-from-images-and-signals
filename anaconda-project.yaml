@@ -84,7 +84,7 @@ downloads: {}
 
 # packages:
 dependencies:
-  - python=3.9
+  - python>=3.9
   - anaconda-project>=0.10.1
 
   # To deal with error in XXXX setup command: use_2to3 is invalid when false
@@ -93,14 +93,24 @@ dependencies:
   - setuptools<58.0.2|>59
 
   # Core
-  - scipy==1.7.1   # To match CoCalc Anaconda2021
+  #- scipy==1.7.1   # To match CoCalc Anaconda2021
+  - scipy
+  #- networkx==2.6.3  # To match CoCalc Anaconda2021
   - scikit-image
   - sympy
   #- conda-forge::jupyter_console
 
+  # Network
+  - conda-forge::python-igraph
+  - conda-forge::graph-tool
+  - conda-forge::networkx>=3.0.0
+  
   # Plotting and visualization tools
   - matplotlib
 
+  # Peformance/optimization
+  - line_profiler
+  
   # Testing
   - pytest-cov
   - pytest-flake8
@@ -114,6 +124,10 @@ dependencies:
   - jupytext
   - pandoc
   - notebook
+  - jupyter_console
+  - qtconsole
+  
+  #- toml
   - ipywidgets
   - conda-forge::jupyter_nbextensions_configurator
   - conda-forge::myst-nb
@@ -136,6 +150,7 @@ dependencies:
     - mmf-setup
     - ruamel-yaml
     - genbadge[all]
+    - PyMaxflow
 channels:
   - defaults
 

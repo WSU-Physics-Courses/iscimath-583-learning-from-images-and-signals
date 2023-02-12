@@ -2,6 +2,7 @@
 """
 from functools import partial
 import io
+import itertools
 import logging
 import os.path
 from pathlib import Path
@@ -12,7 +13,14 @@ import scipy.ndimage
 import scipy.optimize
 import scipy.sparse
 
+from tqdm import tqdm
+
 import PIL
+
+try:
+    import maxflow
+except ImportError:
+    maxflow = None
 
 logging.getLogger("PIL").setLevel(logging.ERROR)  # Suppress PIL messages
 
@@ -21,7 +29,7 @@ sp = scipy
 plt.rcParams["image.cmap"] = "gray"  # Use greyscale as a default.
 
 
-__all__ = ["subplots", "Image", "Denoise"]
+__all__ = ["subplots", "Image", "Denoise", "L1TV"]
 
 
 def subplots(cols=1, rows=1, height=3, aspect=1, **kw):
@@ -223,6 +231,8 @@ class Denoise(Base):
         respectively.
     real : bool
         If True, then some operations that might be complex will return real values.
+    sigma : float
+        Standard deviation (as a fraction) of gaussian noise to add to the image.
     """
 
     lam = 1.0
@@ -558,3 +568,315 @@ class Denoise(Base):
             assert np.allclose(res.imag, 0)
             res = res.real
         return res
+
+
+class L1TVMaxFlow(Base):
+    """Compute the L1TV denoising of an image using the PyMaxFlow library.
+
+    Attributes
+    ==========
+    u_noise : array-like
+        Image to denoise.
+    """
+
+    u_noise = None
+
+    def __init__(self, u_noise, **kw):
+        super().__init__(u_noise=u_noise, **kw)
+
+    def init(self):
+        u_noise = np.asarray(self.u_noise)
+        g = maxflow.Graph[float]()
+        self._nodeids = g.add_grid_nodes(u_noise.shape)
+        a, b, c = 0.1221, 0.0476, 0.0454
+        structure = np.array(
+            [
+                [0, c, 0, c, 0],
+                [c, b, a, b, c],
+                [0, a, 0, a, 0],
+                [c, b, a, b, c],
+                [0, c, 0, c, 0],
+            ]
+        )
+        g.add_grid_edges(self._nodeids, weights=1, structure=structure, symmetric=True)
+        self._graph = g
+
+    def denoise(self, laminv2, threshold=0.5):
+        """Return the L1TV denoising of an image using the PyMaxFlow library."""
+        lam = 2 / laminv2
+        g = self._graph
+        sources = self.u_noise >= threshold
+        g.add_grid_tedges(self._nodeids, lam * sources, lam * (1 - sources))
+        g.maxflow()
+        u = g.get_grid_segments(self._nodeids)
+        return u
+
+
+def compute_l1tv(u_noise, laminv2, threshold=0.5):
+    """Return the L1TV denoising of an image using the PyMaxFlow library."""
+    u_noise = np.asarray(u_noise)
+    lam = 2 / laminv2
+    g = maxflow.Graph[float]()
+    nodeids = g.add_grid_nodes(u_noise.shape)
+    a, b, c = 0.1221, 0.0476, 0.0454
+    structure = np.array(
+        [
+            [0, c, 0, c, 0],
+            [c, b, a, b, c],
+            [0, a, 0, a, 0],
+            [c, b, a, b, c],
+            [0, c, 0, c, 0],
+        ]
+    )
+    g.add_grid_edges(nodeids, weights=1, structure=structure, symmetric=True)
+    sources = u_noise >= threshold
+    g.add_grid_tedges(nodeids, lam * sources, lam * (1 - sources))
+    g.maxflow()
+    u = g.get_grid_segments(nodeids)
+    return u
+
+
+def _wkey(*x):
+    """Return the square of the distance to the neighbor."""
+    return np.square(x).sum()
+
+
+class L1TV(Base):
+    """Class to compute the L1TV denoising of an image.
+
+    Attributes
+    ==========
+    u_noise : array-like
+        Image to denoise.
+    threshold : float
+        Threshold value.  Pixels with values less than this will be treated as zero.
+    mode : {"reflect", "wrap", "periodic", "constant"}
+        Boundary conditions.  Same as in :func:`scipy.ndimage.convolve1d`.
+    """
+
+    u_noise = None
+    threshold = 0.5
+    mode = "reflect"
+
+    _weight = {
+        1: {_wkey(1): 1},
+        2: {
+            _wkey(0, 1): 0.1221,
+            _wkey(1, 1): 0.0476,
+            _wkey(1, 2): 0.0454,
+        },
+    }
+
+    def __init__(self, u_noise, **kw):
+        super().__init__(u_noise=u_noise, **kw)
+
+    def init(self):
+        # Compute the set of weights from [Vixie:2010].
+        u_noise = self.u_noise = np.asarray(self.u_noise)
+        dim = len(u_noise.shape)
+
+        # Compute the weighted adjacency graph
+        if dim == 1:
+            self._weights = self.compute_weights1()
+        elif dim == 2:
+            self._weights = self.compute_weights2()
+        else:
+            raise NotImplementedError(
+                f"Only 1D and 2D images supported. Got {u_noise.shape=}"
+            )
+
+        self._connections = self.compute_connections(self.u_noise, self.threshold)
+
+    def compute_weights1(self):
+        """Return the 1D weighted adjacency graph without the source and target.
+
+        Returns
+        -------
+        weights : csr_array
+            Compressed sparse row array with the weighted adjacency matrix.  This
+            includes the weighted connections between the neighboring nodes as specified
+            in self._weights, and includes two extra rows and columns for the source and
+            target nodes, but does not include the connections with the source and target.
+            See :class:`scipy.sparse.csr_array`.
+        """
+        dim = 1
+        N = self.d.shape[0]
+        weights = {}
+        for n, d in itertools.product(range(N), [-1, 1]):
+            t = n + d
+            if self.mode == "periodic":
+                t = t % N
+            elif self.mode == "constant":
+                if t < 0 or t >= N:
+                    continue
+            elif self.mode == "reflect":
+                t = abs(t)
+                if t >= N:
+                    t = 2 * N - t - 1
+            wkey = _wkey(d)
+            key = (n, t)
+            keyT = (t, n)
+            weight_dict = self._weight[dim]
+            if wkey in weight_dict and key not in weights and keyT not in weights:
+                weights[key] = weights[keyT] = weight_dict[wkey]
+
+        rows = [_k[0] for _k in weights]
+        cols = [_k[1] for _k in weights]
+        vals = list(weights.values())
+
+        return sp.sparse.csr_matrix((vals, (rows, cols)), shape=(N + 2,) * 2)
+
+    def compute_weights2(self):
+        """Return the 2D weighted adjacency graph without the source and target.
+
+        Returns
+        -------
+        weights : csr_array
+            Compressed sparse row array with the weighted adjacency matrix.  This
+            includes the weighted connections between the neighboring nodes as specified
+            in self._weights, and includes two extra rows and columns for the source and
+            target nodes, but does not include the connections with the source and target.
+            See :class:`scipy.sparse.csr_array`.
+        """
+        dim = 2
+        Nx, Ny = self.u_noise.shape
+        weights = {}
+        for nx, ny, dx, dy in itertools.product(
+            range(Nx), range(Ny), *([-2, -1, 0, 2, 1],) * 2
+        ):
+            tx, ty = nx + dx, ny + dy
+            if self.mode == "periodic":
+                tx, ty = tx % Nx, ty % Ny
+            elif self.mode == "constant":
+                if tx < 0 or ty < 0 or tx >= Nx or ty >= Ny:
+                    continue
+            elif self.mode == "reflect":
+                tx, ty = abs(tx), abs(ty)
+                if tx >= Nx:
+                    tx = 2 * Nx - tx - 1
+                if ty >= Ny:
+                    ty = 2 * Ny - ty - 1
+            wkey = _wkey(dx, dy)
+            key = ((nx, ny), (tx, ty))
+            keyT = key[::-1]
+            weight_dict = self._weight[dim]
+            if wkey in weight_dict and key not in weights and keyT not in weights:
+                weights[key] = weights[keyT] = weight_dict[wkey]
+
+        def ind(nx, ny):
+            return ny + nx * Ny
+
+        rows = [ind(*_k[0]) for _k in weights]
+        cols = [ind(*_k[1]) for _k in weights]
+        vals = list(weights.values())
+
+        return sp.sparse.csr_matrix((vals, (rows, cols)), shape=(Nx * Ny + 2,) * 2)
+
+    def compute_connections(self, u, threshold=1):
+        """Return the adjacency graph connecting the source and target.
+
+        Returns
+        -------
+        connections : csr_array
+            Compressed sparse row array with the adjacency matrix.  This includes
+            connections between the source with the pixels >= threshold, and the target
+            with the pixels < threshold.  Does not have the factor λ. See
+           :class:`scipy.sparse.csr_array`.
+        """
+        u = np.ravel(u)
+        s = len(u)
+        t = s + 1
+        t_rows = np.where(u < threshold)[0]
+        s_cols = np.where(u >= threshold)[0]
+        s_rows = s * np.ones(len(s_cols), dtype=int)
+        t_cols = t * np.ones(len(t_rows), dtype=int)
+
+        rows = np.concatenate([s_rows, t_rows])
+        cols = np.concatenate([s_cols, t_cols])
+        vals = np.ones(len(rows))
+        C = sp.sparse.csr_matrix((vals, (rows, cols)), shape=(len(u) + 2,) * 2)
+        return C + C.T
+
+    def denoise(self, laminv2):
+        """Return u, the denoised image.
+
+        Parameters
+        ----------
+        laminv2 : float
+            Smoothing parameter 2/λ.  This represents the minimum radius of curvature of
+            the level sets in the smoothed image (in pixels).
+        """
+        lam = 2 / laminv2
+        N = np.prod(self.u_noise.shape)
+        s = N
+        t = N + 1
+        import flow
+
+        f = flow.Flow(self._weights + self._connections * lam, s=s, t=t)
+        cut = f.min_cut()
+        S, T = cut.S, cut.T
+        S.remove(f.s)
+        T.remove(f.t)
+        u = np.zeros_like(self.u_noise, dtype=int)
+        u_ = u.view()
+        u_.shape = N  # Flat view
+        u_[T] = 1
+        return u
+
+
+class NonLocalMeans(Base):
+    """Non-local means denoising.
+
+    Attributes
+    ----------
+    image : Image
+        Instance of :class:`Image` with the image data.
+    extent : int
+        Extent of matching region on each side of the pixel.
+    weights : array-like, None
+        Weight array for matching.  If not provided, then
+        weights = np.ones((2*extent+1,)*2).
+    sigma : float
+        Standard deviation (as a fraction) of gaussian noise to add to the image.
+    """
+
+    image = None
+    extent = 2
+    weights = None
+    sigma = 0.5
+    seed = 2
+    norm = partial(np.linalg.norm, ord=2)
+
+    def __init__(self, image, **kw):
+        super().__init__(image=image, **kw)
+
+    def init(self):
+        if self.weights is None:
+            self.weights = np.ones((2 * self.extent + 1,) * 2)
+        else:
+            assert np.all(1 == np.mod(self.weight.shape, 2))
+        self.rng = np.random.default_rng(seed=self.seed)
+        self.u_exact = self.image.get_data(sigma=0, normalize=True)
+        self.u_noise = self.image.get_data(
+            sigma=self.sigma, normalize=True, rng=self.rng
+        )
+
+    def compute_overlaps(self, u=None):
+        if u is None:
+            u = self.u_noise
+        u = np.asarray(u)
+
+        Nx, Ny = u.shape
+        ex, ey = [(_e - 1) // 2 for _e in self.weights.shape]
+        rx, ry = range(ex, Nx - ex), range(ey, Ny - ey)
+        # Nx_, Ny_ = Nx - 2 * ex, Ny - 2 * ey
+        overlaps = np.zeros((Nx, Ny, Nx, Ny))
+        for nx, ny, mx, my in tqdm(list(itertools.product(rx, ry, rx, ry))):
+            overlaps[nx, ny, mx, my] = self.norm(
+                self.weights
+                * (
+                    u[nx - ex : nx + ex + 1, ny - ey : ny + ey + 1]
+                    - u[mx - ex : mx + ex + 1, my - ey : my + ey + 1]
+                )
+            )
+        return overlaps

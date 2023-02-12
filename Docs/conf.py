@@ -158,6 +158,8 @@ intersphinx_mapping = {
     "numpy [stable]": ("https://numpy.org/doc/stable/", None),
     "scipy": ("https://docs.scipy.org/doc/scipy/", None),
     "sphinx": ("https://www.sphinx-doc.org/", None),
+    "networkx": ("https://networkx.org/documentation/stable/", None),
+    "igraph": ("https://igraph.readthedocs.io/en/stable/api/", None),
 }
 
 # Napoleon settings

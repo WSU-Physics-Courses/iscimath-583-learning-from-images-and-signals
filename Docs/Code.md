@@ -62,8 +62,10 @@ Minimizing is equivalent to solving:
 \end{gather*}
 
 A direct approach to the minimization procedure is given by {meth}`Denoise.minimize`
-which uses {func}`scipy.optimize.minimize` and the [`L-BFGS-B`](https://docs.scipy.org/doc/scipy/reference/optimize.minimize-lbfgsb.html#optimize-minimize-lbfgsb) method).  Minimization is not the fastest, but is quite
-general, and be directly applied to more complicated methods.
+which uses {func}`scipy.optimize.minimize` and the
+[`L-BFGS-B`](https://docs.scipy.org/doc/scipy/reference/optimize.minimize-lbfgsb.html#optimize-minimize-lbfgsb)
+method).  Minimization is not the fastest, but is quite general, and be directly applied
+to more complicated methods.
 
 \begin{gather*}
   E[u] = \int\frac{1}{p}\bigl(\abs{\vect{\nabla}u}^2 + ϵ_p\bigr)^{p/2} 
@@ -117,5 +119,14 @@ minimization condition using {ref}`sec:FourierTechniques`.
 
 ```{eval-rst}
 .. automodule:: math_583.denoise
+    :members:
+```
+
+## Flow
+
+We also provide some graph tools for solving the {ref}`sec:MinCutMaxFlow` problem.
+
+```{eval-rst}
+.. automodule:: math_583.flow
     :members:
 ```

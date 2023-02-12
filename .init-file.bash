@@ -1,10 +1,11 @@
 export PS1="\h:\W \u\$ "
-source $(conda info --base)/etc/profile.d/conda.sh
-
 # Assume that this is set by running anaconda-project run shell
 CONDA_ENV="${CONDA_PREFIX}"
+
+#eval "$(conda shell.bash hook)"
+source $(conda info --base)/etc/profile.d/conda.sh
 conda deactivate
-conda activate                 # Activate the base environment
+#conda activate                 # Activate the base environment
 conda activate "${CONDA_ENV}"  # Now activate the previously set environment
 alias ap="anaconda-project"
 alias apr="anaconda-project run"
