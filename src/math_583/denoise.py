@@ -871,7 +871,7 @@ class NonLocalMeans(Base):
         rx, ry = range(ex, Nx - ex), range(ey, Ny - ey)
         # Nx_, Ny_ = Nx - 2 * ex, Ny - 2 * ey
         overlaps = np.zeros((Nx, Ny, Nx, Ny))
-        for nx, ny, mx, my in tqdm(list(itertools.product(rx, ry, rx, ry))):
+        for nx, ny, mx, my in tqdm(itertools.product(rx, ry, rx, ry)):
             overlaps[nx, ny, mx, my] = self.norm(
                 self.weights
                 * (
