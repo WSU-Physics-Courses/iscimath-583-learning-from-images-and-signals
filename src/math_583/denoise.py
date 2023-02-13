@@ -10,11 +10,14 @@ from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpecFromSubplotSpec
+from matplotlib.collections import LineCollection
+from matplotlib import cm
+
 import scipy.ndimage
 import scipy.optimize
 import scipy.sparse
 
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 import PIL
 
@@ -29,8 +32,7 @@ sp = scipy
 
 plt.rcParams["image.cmap"] = "gray"  # Use greyscale as a default.
 
-
-__all__ = ["subplots", "Image", "Denoise", "L1TV"]
+__all__ = ["subplots", "Image", "Denoise", "L1TV", "L1TVMaxFlow"]
 
 
 def subplots(cols=1, rows=1, height=3, aspect=1, **kw):
@@ -195,6 +197,7 @@ class Image(Base):
         vmin=None,
         vmax=None,
         ax=None,
+        height=3,
         **kw,
     ):
         """Show the image u.
@@ -214,11 +217,14 @@ class Image(Base):
             Titles for axes.
         ax : Axes, None
             If provided, then the image will be drawn in this axes instance.
+        height : float
+            Passed to :func:`subplots` if ax is None.
         **kw : {}
             Any additional arguments will be passed through to
             :func:`matplotlib.axes.Axes.imshow`.
 
         """
+        dim = len(u.shape)
         us = [u]
         title_dict = {}
         if u_noise is not None:
@@ -236,21 +242,25 @@ class Image(Base):
             title_dict = dict(enumerate(titles))
 
         us.extend(v)
-        if len(us) > 1:
-            if ax is not None:
-                gs = GridSpecFromSubplotSpec(
-                    1, len(us), subplot_spec=ax.get_subplotspec()
-                )
-                ax.set_subplotspec(gs[0])
-                fig = ax.figure()
-                axs = [ax] + list(map(fig.add_subplot, gs[1:]))
-            else:
-                fig, axs = plt.subplots(1, len(us))
-        else:
+        if len(us) == 1:
             if ax is None:
                 ax = plt.gca()
             axs = [ax]
             fig = ax.figure
+        else:
+            if ax is None:
+                if dim == 2:
+                    aspect = np.divide(*u.shape)
+                else:
+                    aspect = 1
+                fig, axs = subplots(len(us), height=height, aspect=aspect)
+            else:
+                gs = GridSpecFromSubplotSpec(1,
+                                             len(us),
+                                             subplot_spec=ax.get_subplotspec())
+                ax.set_subplotspec(gs[0])
+                fig = ax.figure
+                axs = [ax] + list(map(fig.add_subplot, list(gs)[1:]))
 
         if vmax is None:
             if us[-1].dtype == np.dtype("uint8"):
@@ -261,10 +271,10 @@ class Image(Base):
             vmin = min(0, us[-1].min())
 
         for _n, (_u, _ax) in enumerate(zip(us, axs)):
-            if len(_u.shape) == 1:
+            if dim == 1:
                 _ax.plot(_u, **kw)
                 _ax.set(ylim=(vmin, vmax))
-            elif len(_u.shape) == 2:
+            elif dim == 2:
                 _ax.imshow(_u, vmin=vmin, vmax=vmax, **kw)
                 _ax.axis("off")
             else:
@@ -322,9 +332,9 @@ class Denoise(Base):
     def init(self):
         self.rng = np.random.default_rng(seed=self.seed)
         self.u_exact = self.image.get_data(sigma=0, normalize=True)
-        self.u_noise = self.image.get_data(
-            sigma=self.sigma, normalize=True, rng=self.rng
-        )
+        self.u_noise = self.image.get_data(sigma=self.sigma,
+                                           normalize=True,
+                                           rng=self.rng)
 
         # Dictionary of 1d derivative operators
         self._D1_dict = {}
@@ -350,7 +360,9 @@ class Denoise(Base):
         }
 
         # Pre-compute some energies for normalization.
-        self._E_noise = self.get_energy(self.u_noise, parts=True, normalize=False)
+        self._E_noise = self.get_energy(self.u_noise,
+                                        parts=True,
+                                        normalize=False)
         self._E_exact = self.get_energy(self.u_exact, parts=True)
 
     def _fft(self, u, axes=None, axis=None):
@@ -412,20 +424,16 @@ class Denoise(Base):
                 centered=[-0.5, 0, 0.5],
             )
             D1 = sp.sparse.lil_matrix(
-                np.transpose(
-                    [
-                        sp.ndimage.correlate1d(
-                            _I,
-                            weights[kind],
-                            axis=-1,
-                            output=None,
-                            mode=mode,
-                            cval=cval,
-                        )
-                        for _I in np.eye(N)
-                    ]
-                )
-            ).tocsr()
+                np.transpose([
+                    sp.ndimage.correlate1d(
+                        _I,
+                        weights[kind],
+                        axis=-1,
+                        output=None,
+                        mode=mode,
+                        cval=cval,
+                    ) for _I in np.eye(N)
+                ])).tocsr()
             self._D1_dict[key] = (D1, (-D1.T).tocsr())
         D1, _D1T = self._D1_dict[key]
         if transpose:
@@ -460,7 +468,8 @@ class Denoise(Base):
             return res
 
         u = np.asarray(u)
-        du = np.array([self.derivative1d(u, axis=_i) for _i in range(len(u.shape))])
+        du = np.array(
+            [self.derivative1d(u, axis=_i) for _i in range(len(u.shape))])
         return du
 
     def divergence(self, v, transpose=True):
@@ -469,15 +478,15 @@ class Denoise(Base):
 
         if self.mode == "periodic":
             vt = self._fft(v, axes=range(1, len(v.shape)))
-            res = self._ifft(sum(1j * _k * _vt for _k, _vt in zip(self._kxyz, vt)))
+            res = self._ifft(
+                sum(1j * _k * _vt for _k, _vt in zip(self._kxyz, vt)))
             if self.real:  # Can't check v here because it might be complex
                 res = res.real
             return res
 
         return sum(
             self.derivative1d(v[_i], axis=_i, transpose=transpose)
-            for _i in range(len(v.shape[1:]))
-        )
+            for _i in range(len(v.shape[1:])))
 
     def gradient_magnitude(self, u):
         """Return the absolute magnitude of the gradient of u."""
@@ -485,12 +494,11 @@ class Denoise(Base):
             return np.sqrt(self.gradient_magnitude2(u))
 
         return sp.ndimage.generic_gradient_magnitude(
-            u, derivative=self.derivative1d, mode=self.mode
-        )
+            u, derivative=self.derivative1d, mode=self.mode)
 
     def gradient_magnitude2(self, u):
         """Return the square of the magnitude of the gradient of u."""
-        return (abs(self.gradient(u, real=False)) ** 2).sum(axis=0)
+        return (abs(self.gradient(u, real=False))**2).sum(axis=0)
 
     def get_energy(self, u, parts=False, normalize=False):
         """Return the energy.
@@ -508,13 +516,13 @@ class Denoise(Base):
             E_regularization = (-u * self.laplacian(u) + self.eps_p).sum() / 2
         else:
             E_regularization = (
-                (self.gradient_magnitude2(u) + self.eps_p) ** (p / 2)
-            ).sum() / p
+                (self.gradient_magnitude2(u) + self.eps_p)**(p / 2)).sum() / p
 
         if q == 2.0 and self.use_shortcuts:
-            E_data_fidelity = ((u - u_noise) ** 2).sum() / 2
+            E_data_fidelity = ((u - u_noise)**2).sum() / 2
         else:
-            E_data_fidelity = (((u - u_noise) ** 2 + self.eps_q) ** (q / 2)).sum() / q
+            E_data_fidelity = ((
+                (u - u_noise)**2 + self.eps_q)**(q / 2)).sum() / q
 
         E = E_regularization + self.lam * E_data_fidelity
         E0 = self.lam * np.prod(u_noise.shape)
@@ -536,15 +544,13 @@ class Denoise(Base):
         else:
             du = self.gradient(u, real=False)
             dE_regularization = -self.divergence(
-                du * (self.gradient_magnitude2(u) + self.eps_p) ** ((p - 2) / 2)
-            )
+                du * (self.gradient_magnitude2(u) + self.eps_p)**((p - 2) / 2))
 
         if q == 2.0 and self.use_shortcuts:
             dE_data_fidelity = u - u_noise
         else:
-            dE_data_fidelity = (u - u_noise) * ((u - u_noise) ** 2 + self.eps_q) ** (
-                (q - 2) / 2
-            )
+            dE_data_fidelity = (u - u_noise) * (
+                (u - u_noise)**2 + self.eps_q)**((q - 2) / 2)
 
         dE = dE_regularization + self.lam * dE_data_fidelity
 
@@ -592,9 +598,13 @@ class Denoise(Base):
         else:
             print(msg)
 
-    def minimize(
-        self, u0=None, method="L-BFGS-B", callback=True, tol=1e-8, plot=False, **kw
-    ):
+    def minimize(self,
+                 u0=None,
+                 method="L-BFGS-B",
+                 callback=True,
+                 tol=1e-8,
+                 plot=False,
+                 **kw):
         """Directly solve the minimization problem with the L-BFGS-B method."""
         if u0 is None:
             u0 = self.u_noise
@@ -630,7 +640,8 @@ class Denoise(Base):
         mode = self.mode
         if mode not in self._K2:
             raise NotImplementedError(f"{mode=} not in {set(self._K2)}")
-        res = self._ifft(self._fft(self.u_noise) / (self._K2[mode] / self.lam + 1))
+        res = self._ifft(
+            self._fft(self.u_noise) / (self._K2[mode] / self.lam + 1))
         if np.isrealobj(self.u_noise):
             assert np.allclose(res.imag, 0)
             res = res.real
@@ -658,15 +669,13 @@ class L1TVMaxFlow(Base):
         g = maxflow.Graph[float]()
         self._nodeids = g.add_grid_nodes(u_noise.shape)
         a, b, c = 0.1221, 0.0476, 0.0454
-        structure = np.array(
-            [
-                [0, c, 0, c, 0],
-                [c, b, a, b, c],
-                [0, a, 0, a, 0],
-                [c, b, a, b, c],
-                [0, c, 0, c, 0],
-            ]
-        )
+        structure = np.array([
+            [0, c, 0, c, 0],
+            [c, b, a, b, c],
+            [0, a, 0, a, 0],
+            [c, b, a, b, c],
+            [0, c, 0, c, 0],
+        ])
         args = dict(symmetric=False, weights=2, structure=structure)
         if self.mode in {"constant"}:
             args.update(periodic=False)
@@ -706,7 +715,7 @@ class L1TVMaxFlow(Base):
         u = g.get_grid_segments(self._nodeids)
         return u
 
-    def denoise(self, N=20, laminv2=None, thresholds=None):
+    def denoise(self, N=20, laminv2=None, thresholds=None, percentile=False):
         """Return the L1TV denoised image (PyMaxFlow) .
 
         Arguments
@@ -720,6 +729,9 @@ class L1TVMaxFlow(Base):
         thresholds : list, None
             List of thresholds.  These will be used instead of N equally-spaced
             thresholds if provided.
+        percentile : bool
+            If True, then use equally spaced percentiles for thresholds, otherwise, use
+            equally spaced intensities.
 
         Returns
         -------
@@ -728,11 +740,16 @@ class L1TVMaxFlow(Base):
         """
         u = self.u_noise
         if thresholds is None:
-            thresholds = np.linspace(u.min(), u.max(), N)
+            if percentile:
+                thresholds = np.percentile(u, np.linspace(0, 100, N + 1)[1:])
+            else:
+                thresholds = np.linspace(u.min(), u.max(), N + 1)[1:]
         else:
             thresholds = np.sort(thresholds)
         weights = [thresholds.min()] + (np.diff(thresholds)).tolist()
-        us = [self.denoise1(threshold=_th, laminv2=laminv2) for _th in thresholds]
+        us = [
+            self.denoise1(threshold=_th, laminv2=laminv2) for _th in thresholds
+        ]
         return sum(_u * _w for _u, _w in zip(us, weights))
 
 
@@ -743,15 +760,13 @@ def compute_l1tv(u_noise, laminv2, threshold=0.5, mode="constant"):
     g = maxflow.Graph[float]()
     nodeids = g.add_grid_nodes(u_noise.shape)
     a, b, c = 0.1221, 0.0476, 0.0454
-    structure = np.array(
-        [
-            [0, c, 0, c, 0],
-            [c, b, a, b, c],
-            [0, a, 0, a, 0],
-            [c, b, a, b, c],
-            [0, c, 0, c, 0],
-        ]
-    )
+    structure = np.array([
+        [0, c, 0, c, 0],
+        [c, b, a, b, c],
+        [0, a, 0, a, 0],
+        [c, b, a, b, c],
+        [0, c, 0, c, 0],
+    ])
     args = dict(symmetric=False, weights=1, structure=structure)
     if mode in {"constant"}:
         args.update(periodic=False)
@@ -791,7 +806,9 @@ class L1TV(Base):
     mode = "reflect"
 
     _weight = {
-        1: {_wkey(1): 1},
+        1: {
+            _wkey(1): 1
+        },
         2: {
             _wkey(0, 1): 0.1221,
             _wkey(1, 1): 0.0476,
@@ -814,10 +831,10 @@ class L1TV(Base):
             self._weights = self.compute_weights2()
         else:
             raise NotImplementedError(
-                f"Only 1D and 2D images supported. Got {u_noise.shape=}"
-            )
+                f"Only 1D and 2D images supported. Got {u_noise.shape=}")
 
-        self._connections = self.compute_connections(self.u_noise, self.threshold)
+        self._connections = self.compute_connections(self.u_noise,
+                                                     self.threshold)
 
     def compute_weights1(self):
         """Return the 1D weighted adjacency graph without the source and target.
@@ -856,7 +873,7 @@ class L1TV(Base):
         cols = [_k[1] for _k in weights]
         vals = list(weights.values())
 
-        return sp.sparse.csr_matrix((vals, (rows, cols)), shape=(N + 2,) * 2)
+        return sp.sparse.csr_matrix((vals, (rows, cols)), shape=(N + 2, ) * 2)
 
     def compute_weights2(self):
         """Return the 2D weighted adjacency graph without the source and target.
@@ -873,9 +890,8 @@ class L1TV(Base):
         dim = 2
         Nx, Ny = self.u_noise.shape
         weights = {}
-        for nx, ny, dx, dy in itertools.product(
-            range(Nx), range(Ny), *([-2, -1, 0, 2, 1],) * 2
-        ):
+        for nx, ny, dx, dy in itertools.product(range(Nx), range(Ny),
+                                                *([-2, -1, 0, 2, 1], ) * 2):
             tx, ty = nx + dx, ny + dy
             if self.mode == "periodic":
                 tx, ty = tx % Nx, ty % Ny
@@ -902,7 +918,8 @@ class L1TV(Base):
         cols = [ind(*_k[1]) for _k in weights]
         vals = list(weights.values())
 
-        return sp.sparse.csr_matrix((vals, (rows, cols)), shape=(Nx * Ny + 2,) * 2)
+        return sp.sparse.csr_matrix((vals, (rows, cols)),
+                                    shape=(Nx * Ny + 2, ) * 2)
 
     def compute_connections(self, u, threshold=1):
         """Return the adjacency graph connecting the source and target.
@@ -926,7 +943,8 @@ class L1TV(Base):
         rows = np.concatenate([s_rows, t_rows])
         cols = np.concatenate([s_cols, t_cols])
         vals = np.ones(len(rows))
-        C = sp.sparse.csr_matrix((vals, (rows, cols)), shape=(len(u) + 2,) * 2)
+        C = sp.sparse.csr_matrix((vals, (rows, cols)),
+                                 shape=(len(u) + 2, ) * 2)
         return C + C.T
 
     def denoise(self, laminv2):
@@ -984,14 +1002,14 @@ class NonLocalMeans(Base):
 
     def init(self):
         if self.weights is None:
-            self.weights = np.ones((2 * self.extent + 1,) * 2)
+            self.weights = np.ones((2 * self.extent + 1, ) * 2)
         else:
             assert np.all(1 == np.mod(self.weight.shape, 2))
         self.rng = np.random.default_rng(seed=self.seed)
         self.u_exact = self.image.get_data(sigma=0, normalize=True)
-        self.u_noise = self.image.get_data(
-            sigma=self.sigma, normalize=True, rng=self.rng
-        )
+        self.u_noise = self.image.get_data(sigma=self.sigma,
+                                           normalize=True,
+                                           rng=self.rng)
 
     def compute_overlaps(self, u=None):
         if u is None:
@@ -1005,10 +1023,204 @@ class NonLocalMeans(Base):
         overlaps = np.zeros((Nx, Ny, Nx, Ny))
         for nx, ny, mx, my in tqdm(itertools.product(rx, ry, rx, ry)):
             overlaps[nx, ny, mx, my] = self.norm(
-                self.weights
-                * (
-                    u[nx - ex : nx + ex + 1, ny - ey : ny + ey + 1]
-                    - u[mx - ex : mx + ex + 1, my - ey : my + ey + 1]
-                )
-            )
+                self.weights * (u[nx - ex:nx + ex + 1, ny - ey:ny + ey + 1] -
+                                u[mx - ex:mx + ex + 1, my - ey:my + ey + 1]))
         return overlaps
+
+
+class CharacteristicGraphs(Base):
+    """
+
+    Attributes
+    ----------
+    u_noise : array-like
+        Image to denoise.
+    kind : {'G0', 'K1', 'K2'}
+        Type of connectivity (see [Asaki:2010]).
+    """
+
+    u = None
+    kind = "K1"
+
+    def __init__(self, u, **kw):
+        super().__init__(u=u, **kw)
+
+    def init(self):
+        # Indices
+        u = self.u
+        Nx, Ny = u.shape
+        ix, iy = np.mgrid[:Nx, :Ny]
+        wx = abs(np.diff(u, axis=0))  # vertical edge weights
+        wy = abs(np.diff(u, axis=1))  # horizontal edge weights
+
+        self.V0 = set(list(zip(ix.ravel(), iy.ravel())))  # All vertices
+
+        # Get all edges in G0 and corresponding weights.
+        E0 = [
+            (_ixy, 0) for _ixy in zip(ix[:-1, :].ravel(), iy[:-1, :].ravel())
+        ] + [(_ixy, 1) for _ixy in zip(ix[:, :-1].ravel(), iy[:, :-1].ravel())]
+        w0 = np.concatenate([wx.ravel(), wy.ravel()])
+
+        self.E0 = set(E0)
+        ## Sort by weight
+        self._w0, self._E0 = zip(*sorted(zip(w0, E0)))
+        self.weights = dict(zip(E0, w0))
+
+    def compute_G0(self):
+        """Return (V, E)=(V0, E0) defining the G0 connectivity graph."""
+        return (self.V0, self.E0)
+
+    def compute_K1(self):
+        """Return (V, E) defining the K1 connectivity graph."""
+        # 1. Begin with an empty graph V ={} and E={}.
+        clusters = []
+        V = set()
+        E = set()
+
+        # 2. Add to E the edge of minimum weight in E0 that does not create a cycle in (V, E).
+        # Add the corresponding vertices to V that are not already in V .
+        # 3. Repeat step 2 until V = V0.
+        edges = tqdm(self._E0)
+        for e in edges:
+            va, vb = self.get_vertices(e)
+            na = nb = None
+            assert e not in E
+            for _n, (_V, _E) in enumerate(clusters):
+                if va in _V:
+                    na = _n
+                if vb in _V:
+                    nb = _n
+            if na is None and nb is None:
+                # New cluster
+                clusters.append(({va, vb}, {e}))
+                assert va not in V and vb not in V
+            elif na is None or nb is None:
+                # Grow a cluster
+                if na is None:
+                    _V, _E = clusters[nb]
+                    _V.add(va)
+                    _E.add(e)
+                    assert va not in V and vb in V
+                else:
+                    _V, _E = clusters[na]
+                    _V.add(vb)
+                    _E.add(e)
+                    assert va in V and vb not in V
+            elif na != nb:
+                # Connect two clusters
+                _Va, _Ea = clusters[na]
+                _Vb, _Eb = clusters.pop(nb)
+                _Va.update(_Vb)
+                _Ea.update(_Eb)
+                _Ea.add(e)
+                assert va in V and vb in V
+            else:
+                # Edge would create a cycle
+                continue
+            V.update({va, vb})
+            E.add(e)
+            edges.set_description(
+                f"{len(V)} of {len(self.V0)}: {len(clusters)} clusters")
+
+        # 4. Find the edge of MAXIMUM weight in E0 that does not create a cycle in (V, E).
+        # Set wcut equal to the corresponding edge weight.
+        notE = set(self._E0).difference(E)
+        edges = tqdm(reversed(self._E0))  # MAXIMUM... reverse here!
+        for n, e in enumerate(edges):
+            va, vb = self.get_vertices(e)
+            for _n, (_V, _E) in enumerate(clusters):
+                if va in _V:
+                    na = _n
+                if vb in _V:
+                    nb = _n
+            if na is not None and na == nb and e not in E:
+                # Edge would form a cycle
+                continue
+            break
+
+        wcut = self.weights[e]
+
+        # Compute degrees
+        degs = {_v: 0 for _v in V}
+        for e in E:
+            va, vb = self.get_vertices(e)
+            degs[va] += 1
+            degs[vb] += 1
+
+        # 5. To each vertex of degree 1 add to E the associated edge from E0 that
+        #    (a) has smallest weight,
+        #    (b) is not already in E, and
+        #    (c) if the edge weight is less than wcut.
+        deg1 = [v for v in degs if degs[v] == 1]
+        for v in deg1:
+            for _w, e in sorted(
+                (self.weights[_e], _e) for _e in self.get_edges(v)):
+                if _w < wcut and e not in E:
+                    E.add(e)
+                    for _V, _E in clusters:
+                        if v in _V:
+                            _E.add(e)
+                    break
+        return (V, E)
+
+    def compute_K2(self):
+        """Return (V, E) defining the K2 vertex inclusion graph."""
+        # 1. Begin with an empty graph V ={} and E={}.
+        V = set()
+        E = set()
+
+        # 2. Add the edge of smallest weight from E0 to E that is not already in E, and
+        #    the corresponding vertices from V0 to V that are not already in V .
+        # 3. Repeat step 2 until V = V0.
+        edges = tqdm(self._E0)
+        for e in edges:
+            va, vb = self.get_vertices(e)
+            V.update({va, vb})
+            E.add(e)
+            if V == self.V0:
+                break
+            edges.set_description(f"{len(V)} of {len(self.V0)}")
+
+        # 4. Add all edges from E0 to E that are of equal weight to the largest edge weight in E.
+        wmax = max(self.weights[_e] for _e in E)
+        for e in [e for e in self.E0.difference(E) if self.weights[e] == wmax]:
+            V.update(self.get_vertices(e))
+            E.add(e)
+        return (V, E)
+
+    @staticmethod
+    def get_vertices(edge):
+        """Return the vertices connected by the edge."""
+        va, d = edge
+        vb = list(va)
+        vb[d] += 1
+        vb = tuple(vb)
+        return (va, vb)
+
+    def get_edges(self, v):
+        """Return the adjacent edges."""
+        ix, iy = v
+        Nx, Ny = self.u.shape
+        edges = []
+        if ix > 0:
+            edges.append(((ix - 1, iy), 0))
+        if iy > 0:
+            edges.append(((ix, iy - 1), 1))
+        if ix < Nx - 1:
+            edges.append(((ix, iy), 0))
+        if iy < Ny - 1:
+            edges.append(((ix, iy), 1))
+        return edges
+
+    def draw_graph(self, E, weights=None, ax=None, **kw):
+        if ax is None:
+            fig, ax = subplots()
+        segments = []
+        for e in E:
+            va, vb = self.get_vertices(e)
+            segments.append((va, vb))
+        if weights is not None:
+            kw["colors"] = cm.viridis(weights)
+        ax.add_collection(LineCollection(segments, **kw))
+        ax.autoscale()
+        ax.set(aspect=1)
