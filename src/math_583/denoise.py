@@ -974,60 +974,6 @@ class L1TV(Base):
         return u
 
 
-class NonLocalMeans(Base):
-    """Non-local means denoising.
-
-    Attributes
-    ----------
-    image : Image
-        Instance of :class:`Image` with the image data.
-    extent : int
-        Extent of matching region on each side of the pixel.
-    weights : array-like, None
-        Weight array for matching.  If not provided, then
-        weights = np.ones((2*extent+1,)*2).
-    sigma : float
-        Standard deviation (as a fraction) of gaussian noise to add to the image.
-    """
-
-    image = None
-    extent = 2
-    weights = None
-    sigma = 0.5
-    seed = 2
-    norm = partial(np.linalg.norm, ord=2)
-
-    def __init__(self, image, **kw):
-        super().__init__(image=image, **kw)
-
-    def init(self):
-        if self.weights is None:
-            self.weights = np.ones((2 * self.extent + 1, ) * 2)
-        else:
-            assert np.all(1 == np.mod(self.weight.shape, 2))
-        self.rng = np.random.default_rng(seed=self.seed)
-        self.u_exact = self.image.get_data(sigma=0, normalize=True)
-        self.u_noise = self.image.get_data(sigma=self.sigma,
-                                           normalize=True,
-                                           rng=self.rng)
-
-    def compute_overlaps(self, u=None):
-        if u is None:
-            u = self.u_noise
-        u = np.asarray(u)
-
-        Nx, Ny = u.shape
-        ex, ey = [(_e - 1) // 2 for _e in self.weights.shape]
-        rx, ry = range(ex, Nx - ex), range(ey, Ny - ey)
-        # Nx_, Ny_ = Nx - 2 * ex, Ny - 2 * ey
-        overlaps = np.zeros((Nx, Ny, Nx, Ny))
-        for nx, ny, mx, my in tqdm(itertools.product(rx, ry, rx, ry)):
-            overlaps[nx, ny, mx, my] = self.norm(
-                self.weights * (u[nx - ex:nx + ex + 1, ny - ey:ny + ey + 1] -
-                                u[mx - ex:mx + ex + 1, my - ey:my + ey + 1]))
-        return overlaps
-
-
 class CharacteristicGraphs(Base):
     """
 
@@ -1121,11 +1067,12 @@ class CharacteristicGraphs(Base):
             E.add(e)
             edges.set_description(
                 f"{len(V)} of {len(self.V0)}: {len(clusters)} clusters")
+            if V == self.V0:
+                break
 
-        # 4. Find the edge of MAXIMUM weight in E0 that does not create a cycle in (V, E).
+        # 4. Find the edge of minimum weight in E0 that does not create a cycle in (V, E).
         # Set wcut equal to the corresponding edge weight.
-        notE = set(self._E0).difference(E)
-        edges = tqdm(reversed(self._E0))  # MAXIMUM... reverse here!
+        edges = tqdm([e for e in self._E0 if e not in E])
         for n, e in enumerate(edges):
             va, vb = self.get_vertices(e)
             for _n, (_V, _E) in enumerate(clusters):
@@ -1133,7 +1080,8 @@ class CharacteristicGraphs(Base):
                     na = _n
                 if vb in _V:
                     nb = _n
-            if na is not None and na == nb and e not in E:
+            assert na is not None and nb is not None
+            if na == nb:
                 # Edge would form a cycle
                 continue
             break
@@ -1224,3 +1172,82 @@ class CharacteristicGraphs(Base):
         ax.add_collection(LineCollection(segments, **kw))
         ax.autoscale()
         ax.set(aspect=1)
+
+
+class NonLocalMeans(Base):
+    """Non-local means denoising by brute force.
+
+    Attributes
+    ----------
+    image : Image
+        Instance of :class:`Image` with the image data.
+    extent : int
+        Extent of matching region on each side of the pixel.
+    weights : array-like, None
+        Weight array for matching.  If not provided, then
+        weights = np.ones((2*extent+1,)*2).
+    sigma : float
+        Standard deviation (as a fraction) of gaussian noise to add to the image.
+    """
+
+    image = None
+    extent = 2
+    weights = None
+    sigma = 0.5
+    seed = 2
+
+    def norm(self, u):
+        return np.linalg.norm(u.ravel(), ord=2)
+
+    def __init__(self, image, **kw):
+        super().__init__(image=image, **kw)
+
+    def init(self):
+        self.Nx, self.Ny = self.image.shape
+        if self.weights is None:
+            self.weights = np.ones((2 * self.extent + 1, ) * 2)
+        else:
+            assert np.all(1 == np.mod(self.weight.shape, 2))
+        self.rng = np.random.default_rng(seed=self.seed)
+        self.u_exact = self.image.get_data(sigma=0, normalize=True)
+        self.u_noise = self.image.get_data(sigma=self.sigma,
+                                           normalize=True,
+                                           rng=self.rng)
+
+    def ixy(self, n):
+        """Return (ix, iy) from linear index n into overlap array."""
+        Nx, Ny = self.image.shape
+        ex, ey = [(_e - 1) // 2 for _e in self.weights.shape]
+        nx, ny = Nx - 2 * ex, Ny - 2 * ey
+        iy = ey + n % ny
+        ix = ex + n // ny
+        return (ix, iy)
+
+    def n(self, ix, iy):
+        """Return linear index n in overlap array from (ix, iy)."""
+        Nx, Ny = self.image.shape
+        ex, ey = [(_e - 1) // 2 for _e in self.weights.shape]
+        nx, ny = Nx - 2 * ex, Ny - 2 * ey
+        return (iy - ey) + ny * (ix - ex)
+
+    def compute_overlaps(self, u=None):
+        if u is None:
+            u = self.u_noise
+        u = np.asarray(u).astype(float)
+
+        Nx, Ny = u.shape
+        ex, ey = [(_e - 1) // 2 for _e in self.weights.shape]
+        rx, ry = range(ex, Nx - ex), range(ey, Ny - ey)
+        # Nx_, Ny_ = Nx - 2 * ex, Ny - 2 * ey
+
+        N = len(rx) * len(ry)
+        overlaps = set()
+        for n in tqdm(range(N - 1)):
+            for m in range(n + 1, N):
+                (nx, ny), (mx, my) = self.ixy(n), self.ixy(m)
+                err = self.norm(self.weights *
+                                (u[nx - ex:nx + ex + 1, ny - ey:ny + ey + 1] -
+                                 u[mx - ex:mx + ex + 1, my - ey:my + ey + 1]))
+                overlaps.add((err, (m, n)))
+
+        return sorted(overlaps)
