@@ -22,10 +22,44 @@ import numpy as np, matplotlib.pyplot as plt
 from IPython.display import clear_output, display
 ```
 
+```{code-cell} ipython3
+import numpy as np
+from importlib import reload
+from math_583 import denoise; reload(denoise)
+im = denoise.Image()
+u_noise = im.get_data(sigma=0.4)
+l1tv = denoise.L1TVMaxFlow(u_noise, laminv2=2)
+im.show(l1tv.denoise1(threshold=0.2), u_noise, im.get_data(sigma=0))
+```
+
+```{code-cell} ipython3
+%time im.show(l1tv.denoise(N=10), u_noise, im.get_data(sigma=0))
+```
+
+```{code-cell} ipython3
+
+```
+
+```{code-cell} ipython3
+d = denoise.Denoise(im, p=1, q=1, lam=2/2)
+u = d.minimize(callback=None)
+```
+
+```{code-cell} ipython3
+ths = np.linspace(u_noise.min(), u_noise.max(), 10)
+us = list(map(l1tv.denoise1, ths))
+im.show(*us)
+```
+
+```{code-cell} ipython3
+im.show(u)
+```
+
 # Nonlocal Means
 
 ```{code-cell} ipython3
-np.linalg.norm(np.random.random((3, 4)), ord=np.inf)
+import numpy as np
+np.dot
 ```
 
 ```{code-cell} ipython3

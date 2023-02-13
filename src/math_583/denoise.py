@@ -9,6 +9,7 @@ from pathlib import Path
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.gridspec import GridSpecFromSubplotSpec
 import scipy.ndimage
 import scipy.optimize
 import scipy.sparse
@@ -184,29 +185,93 @@ class Image(Base):
             plt.close(fig)
             return png.getvalue()
 
-    def show(self, u, vmin=None, vmax=None, ax=None, **kw):
-        if vmax is None:
-            if u.dtype == np.dtype("uint8"):
-                vmax = max(255, u.max())
+    def show(
+        self,
+        u,
+        u_noise=None,
+        u_exact=None,
+        *v,
+        titles=None,
+        vmin=None,
+        vmax=None,
+        ax=None,
+        **kw,
+    ):
+        """Show the image u.
+
+        Arguments
+        ---------
+        u, u_noise, u_exact, *v : array-like
+            Images to be shown.
+            axes will be allocated with u on the left.
+        vmin, vmax : float, None
+            If provided, then these will be provided to
+            :func:`matplotlib.axes.Axes.imshow`, otherwise, they will be computed as
+            follows.  If ``u.dtype`` is ``uint8``, then  ``vmax=255``, otherwise
+            ``vmax=1``.  ``vmin=min(0, u.min())``.  The right-most image will be used to
+            compute vmin, vmax.
+        titles : [str], None
+            Titles for axes.
+        ax : Axes, None
+            If provided, then the image will be drawn in this axes instance.
+        **kw : {}
+            Any additional arguments will be passed through to
+            :func:`matplotlib.axes.Axes.imshow`.
+
+        """
+        us = [u]
+        title_dict = {}
+        if u_noise is not None:
+            us.append(u_noise)
+            if len(v) == 0:
+                title_dict[0] = "u"
+                title_dict[len(us) - 1] = "u_noise"
+        if u_exact is not None:
+            us.append(u_exact)
+            if len(v) == 0:
+                title_dict[0] = "u"
+                title_dict[len(us) - 1] = "u_exact"
+
+        if titles:
+            title_dict = dict(enumerate(titles))
+
+        us.extend(v)
+        if len(us) > 1:
+            if ax is not None:
+                gs = GridSpecFromSubplotSpec(
+                    1, len(us), subplot_spec=ax.get_subplotspec()
+                )
+                ax.set_subplotspec(gs[0])
+                fig = ax.figure()
+                axs = [ax] + list(map(fig.add_subplot, gs[1:]))
             else:
-                vmax = max(1.0, u.max())
-        if vmin is None:
-            vmin = min(0, u.min())
-
-        if ax is None:
-            ax = plt.gca()
-
-        if len(u.shape) == 1:
-            ax.plot(u, **kw)
-            ax.set(ylim=(vmin, vmax))
-        elif len(u.shape) == 2:
-            ax.imshow(u, vmin=vmin, vmax=vmax, **kw)
-            ax.axis("off")
+                fig, axs = plt.subplots(1, len(us))
         else:
-            raise NotImplementedError(f"Can't show {u.shape=}")
-        fig = ax.get_figure()
-        plt.close(fig)
-        return fig
+            if ax is None:
+                ax = plt.gca()
+            axs = [ax]
+            fig = ax.figure
+
+        if vmax is None:
+            if us[-1].dtype == np.dtype("uint8"):
+                vmax = max(255, us[-1].max())
+            else:
+                vmax = max(1.0, us[-1].max())
+        if vmin is None:
+            vmin = min(0, us[-1].min())
+
+        for _n, (_u, _ax) in enumerate(zip(us, axs)):
+            if len(_u.shape) == 1:
+                _ax.plot(_u, **kw)
+                _ax.set(ylim=(vmin, vmax))
+            elif len(_u.shape) == 2:
+                _ax.imshow(_u, vmin=vmin, vmax=vmax, **kw)
+                _ax.axis("off")
+            else:
+                raise NotImplementedError(f"Can't show {_u.shape=}")
+
+            _ax.set(title=title_dict.get(_n, None))
+        plt.sca(axs[0])
 
     imshow = show
 
@@ -538,6 +603,8 @@ class Denoise(Base):
             if callback is True:
                 callback = self.callback
             callback = partial(callback, plot=plot)
+        else:
+            callback = None
         res = sp.optimize.minimize(
             self._f,
             x0=y0,
@@ -580,6 +647,8 @@ class L1TVMaxFlow(Base):
     """
 
     u_noise = None
+    laminv2 = None
+    mode = "constant"
 
     def __init__(self, u_noise, **kw):
         super().__init__(u_noise=u_noise, **kw)
@@ -598,21 +667,76 @@ class L1TVMaxFlow(Base):
                 [0, c, 0, c, 0],
             ]
         )
-        g.add_grid_edges(self._nodeids, weights=1, structure=structure, symmetric=True)
+        args = dict(symmetric=False, weights=2, structure=structure)
+        if self.mode in {"constant"}:
+            args.update(periodic=False)
+        elif self.mode in {"wrap", "periodic"}:
+            args.update(periodic=True)
+        else:
+            raise NotImplementedError(f"Mode {self.mode=} not implemented")
+        g.add_grid_edges(self._nodeids, **args)
         self._graph = g
 
-    def denoise(self, laminv2, threshold=0.5):
-        """Return the L1TV denoising of an image using the PyMaxFlow library."""
+    def denoise1(self, threshold=0.5, laminv2=None):
+        """Return the L1TV denoised image (PyMaxFlow) at a single threshold.
+
+        Arguments
+        ---------
+        laminv2 : float
+            Smoothing parameter 2/λ.  This defines the minimum radius of curvature of
+            the level sets.
+        threshold : float
+            Threshold level.  Level sets for u_noise >= threshold will be computed.
+
+        Returns
+        -------
+        u : array_like
+            Denoised b/w image (0, 1) at the specified threshold.
+        """
+        if laminv2 is None:
+            laminv2 = self.laminv2
+        if laminv2 is None:
+            raise ValueError(f"Must provide laminv2: got {laminv2=}")
+
         lam = 2 / laminv2
-        g = self._graph
+        g = self._graph.copy()
         sources = self.u_noise >= threshold
-        g.add_grid_tedges(self._nodeids, lam * sources, lam * (1 - sources))
+        g.add_grid_tedges(self._nodeids, lam * (1 - sources), lam * sources)
         g.maxflow()
         u = g.get_grid_segments(self._nodeids)
         return u
 
+    def denoise(self, N=20, laminv2=None, thresholds=None):
+        """Return the L1TV denoised image (PyMaxFlow) .
 
-def compute_l1tv(u_noise, laminv2, threshold=0.5):
+        Arguments
+        ---------
+        laminv2 : float
+            Smoothing parameter 2/λ.  This defines the minimum radius of curvature of
+            the level sets.
+        N : int
+            Number of thresholds to use.  Image will contain equally spaced thresholds
+            between 0 and u_noise.max().
+        thresholds : list, None
+            List of thresholds.  These will be used instead of N equally-spaced
+            thresholds if provided.
+
+        Returns
+        -------
+        u : array_like
+            Denoised b/w image with N levels at the specified thresholds.
+        """
+        u = self.u_noise
+        if thresholds is None:
+            thresholds = np.linspace(u.min(), u.max(), N)
+        else:
+            thresholds = np.sort(thresholds)
+        weights = [thresholds.min()] + (np.diff(thresholds)).tolist()
+        us = [self.denoise1(threshold=_th, laminv2=laminv2) for _th in thresholds]
+        return sum(_u * _w for _u, _w in zip(us, weights))
+
+
+def compute_l1tv(u_noise, laminv2, threshold=0.5, mode="constant"):
     """Return the L1TV denoising of an image using the PyMaxFlow library."""
     u_noise = np.asarray(u_noise)
     lam = 2 / laminv2
@@ -628,7 +752,15 @@ def compute_l1tv(u_noise, laminv2, threshold=0.5):
             [0, c, 0, c, 0],
         ]
     )
-    g.add_grid_edges(nodeids, weights=1, structure=structure, symmetric=True)
+    args = dict(symmetric=False, weights=1, structure=structure)
+    if mode in {"constant"}:
+        args.update(periodic=False)
+    elif mode in {"wrap", "periodic"}:
+        args.update(periodic=True)
+    else:
+        raise NotImplementedError(f"Mode {mode=} not implemented")
+
+    g.add_grid_edges(nodeids, **args)
     sources = u_noise >= threshold
     g.add_grid_tedges(nodeids, lam * sources, lam * (1 - sources))
     g.maxflow()

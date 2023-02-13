@@ -150,7 +150,7 @@ dependencies:
     - mmf-setup
     - ruamel-yaml
     - genbadge[all]
-    - PyMaxflow
+    - PyMaxflow>=1.3.0
 channels:
   - defaults
 
