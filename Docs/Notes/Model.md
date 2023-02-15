@@ -323,3 +323,69 @@ def dE(u):
 u_restored = grad_descent(x0,E,dE)
 ```
 
+Part 2: PQ Denoising
+
+A generalization of our energy functional allows us to take powers of our norms.
+
+$$E(u) = \frac{1}{p}\|\nabla u\|^p + \lambda \frac{1}{q}\|u-f\|^q$$
+
+But the case where $p = q = 1$ is exceptionally interesting for its connection to something called the **flat norm**, which we will build up to now.
+
+The flat norm provides a sense of distance in the space of currents. Currents are the generalized surfaces of geoemetric measure theory. Currents may be realtively tame, or they may be extremely wild objects. We will construct relatively tame objects of currents to build intuition for what they are.
+
+Assume that we have some kind of 2-dimensional surface $M$ in $\mathbb{R}^3$. We can assign a two-vector $\xi(x)$ at each point $x$ of the surface so that each pair spans a small parallelogram tangent to the surface at the point where they are anchored.
+
+If we are then handed a 2-form, which is a function $\omega$ that takes in said 2-vector parallelogram $\xi(x)$ at the point $x$ and produces a real number $\omega(\xi(x))$ (for instance, possibly by projecting the parallelogram down onto the xy-plane and yielding the area there) we have a scalar valued function defined on the surface and can thus integrate it with the appropriate dimension (Hausdorff) measure $\int_M \omega(\xi(x))d\mathcal{H}^2(x)$ to get a number.
+
+For a fixed $k$-dimensional surface $M$ we may view this integral above as a linear map $T_M$ which assigns $k$-forms $\omega \mapsto \int_M \omega(\xi(x))d\mathcal{H}^k(x) \in \R$ to real numbers (it inherits linearity from the integral). This object is an example of a current, and a particularly nice one. Most generally, a current may be an arbitrary element of the dual space to differential forms.
+
+The flat norm works by decomposing a current into two pieces, and then each piece is measured differently. The flat norm then finds the minimum over all such decompositions.
+
+Recall that if $S$ is a $k+1$ dimensional object, then its boundary is $k$ dimensional. i.e the boundary of a 2-d disk is a 1-d circle, the boundary of a 3-d ball is a 2-d sphere. If $T$ is a $k$-dimesional current and $S$ is a $k+1$ dimensional current, then we can write:
+
+$$T = (T-\partial S) + \partial S$$
+
+In measuring the "mass" of the above object, we expect to simply get the mass of $T$ which is not particularly useful. However we can measure $T-\partial S$ as normal $M(T-\partial S)$ but then instead of adding on the mass of the boundary of $S$, we can measure $S$ itself. The definition of the flat norm is:
+
+$$F(T) = \min_{S} (M(T-\partial S) + M(S))$$
+
+We can add some control to the above by adding in the parameter $\lambda = \frac{1}{r}$ where $r$ is the minimum radius of curvature of level sets in the minimizer. We then get:
+
+$$F_\lambda(T) = \min_{S} (M(T-\partial S) + \lambda M(S))$$
+
+*image of flat norm decomposition*
+
+We may view the $L^1TV$ functional (the case with $p = q = 1$) as a special case of the flat norm for currents that are boundaries of $n$-dimensional sets in $\mathbb{R}^n$. 
+
+$$f(u) = \int_R |\nabla u|dx + \lambda \int_R |u-d|dx$$
+
+Suppose that $d = \chi_\Omega$ is an indicator (characteristic) function defined by:
+
+$$\chi_\Omega(x) = \begin{cases} 1 & x \in \Omega\\ 0 & x \not \in \Omega\end{cases}$$
+
+It is then a theorem that in this case $f(u)$ has a minimizer $u = \chi_\Sigma$ which is also a characteristic function. Hence we restrict to minimizing over characteristic functions when the data $d$ is a characteristic function.
+
+Suppose then $u = \chi_\Sigma$ and $d = \chi_\Omega$. Then $f(u) = \int_R |\nabla u| dx + \lambda \int_R |u-d|dx = M(\partial \Sigma) + \lambda M(\Sigma \Delta \Omega)$ where $\Sigma \Delta \Omega$ is the symmetric difference between $\Sigma$ and $\Omega$ and is the set of points that are in either $\Sigma$ or $\Omega$ but not both.
+
+If we give $\Sigma$ a multiplicity of $-1$ and $\Omega$ a multiplicity of $1$ and add them we get a current $S_{\Sigma \Delta \Omega}$ that turns $T_\Omega$ into $T_\Sigma$, i.e.
+
+$$T_\Sigma = T_\Omega - S_{\Sigma \Delta \Omega}$$
+
+Which implies
+
+$$T_{\partial \Sigma} = T_{\partial \Omega} - S_{\partial(\Sigma \Delta \Omega)}$$
+
+Since $S_{\partial(\Sigma \Delta \Omega)} = \partial S_{\Sigma \Delta \Omega}$ we can write:
+
+$$T_{\partial \Omega} = (T_{\partial \Omega} - \partial S_{\Sigma \Delta \Omega}) + \partial S_{\Sigma \Delta \Omega}$$
+
+$$T_{\partial \Omega} = T_{\partial \Sigma} + \partial S_{\Sigma \Delta \Omega}$$
+
+So the flat norm $\mathbb{F}_\lambda$ is given by:
+
+\begin{align*}
+\mathbb{F}_\lambda(T_{\partial \Omega}) &= \min_{S_{\Sigma \Delta \Omega}}(M(T_{\partial \Sigma}) + \lambda M (S_{\Sigma \Delta \Omega}))\\
+&= \min_{\Sigma \Delta \Omega}(\text{perimeter}(\Sigma) + \lambda |\Sigma \Delta \Omega |)\\
+&= \min_\Sigma \int_R |\nabla \chi_\Sigma|dx + \lambda \int_R |\chi_\Sigma - \chi_\Omega|dx\\
+&= \min_u \int_R |\nabla u|dx + \lambda \int_R |u-\chi_\Omega | dx
+\end{align*}
