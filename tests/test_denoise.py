@@ -1,3 +1,4 @@
+from itertools import product
 import numpy as np
 
 import pytest
@@ -20,6 +21,11 @@ def lam(request):
 
 @pytest.fixture(params=[False, True])
 def use_shortcuts(request):
+    yield request.param
+
+
+@pytest.fixture(params=[False, True])
+def subtract_mean(request):
     yield request.param
 
 
@@ -70,3 +76,83 @@ class TestDenoise:
             d2u = d.divergence(d.gradient(u, real=False))
             d2u_ = d.laplacian(u)
             assert np.allclose(d2u, d2u_)
+
+
+class TestNonLocalMeans:
+    def test_pad(self):
+        u = np.array([[1, 2, 3], [4, 5, 6]])
+        dx = dy = 5
+        us_ = {
+            "wrap": np.array(
+                [
+                    [2, 3, 1, 2, 3, 1, 2],
+                    [5, 6, 4, 5, 6, 4, 5],
+                    [2, 3, 1, 2, 3, 1, 2],
+                    [5, 6, 4, 5, 6, 4, 5],
+                    [2, 3, 1, 2, 3, 1, 2],
+                    [5, 6, 4, 5, 6, 4, 5],
+                ]
+            ),
+            "constant": np.array(
+                [
+                    [0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 1, 2, 3, 0, 0],
+                    [0, 0, 4, 5, 6, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0],
+                ]
+            ),
+            "reflect": np.array(
+                [
+                    [5, 4, 4, 5, 6, 6, 5],
+                    [2, 1, 1, 2, 3, 3, 2],
+                    [2, 1, 1, 2, 3, 3, 2],
+                    [5, 4, 4, 5, 6, 6, 5],
+                    [5, 4, 4, 5, 6, 6, 5],
+                    [2, 1, 1, 2, 3, 3, 2],
+                ]
+            ),
+            "nearest": np.array(
+                [
+                    [1, 1, 1, 2, 3, 3, 3],
+                    [1, 1, 1, 2, 3, 3, 3],
+                    [1, 1, 1, 2, 3, 3, 3],
+                    [4, 4, 4, 5, 6, 6, 6],
+                    [4, 4, 4, 5, 6, 6, 6],
+                    [4, 4, 4, 5, 6, 6, 6],
+                ],
+            ),
+            "mirror": np.array(
+                [
+                    [3, 2, 1, 2, 3, 2, 1],
+                    [6, 5, 4, 5, 6, 5, 4],
+                    [3, 2, 1, 2, 3, 2, 1],
+                    [6, 5, 4, 5, 6, 5, 4],
+                    [3, 2, 1, 2, 3, 2, 1],
+                    [6, 5, 4, 5, 6, 5, 4],
+                ]
+            ),
+        }
+        us_["periodic"] = us_["wrap"]
+
+        for mode in us_:
+            nlm = denoise.NonLocalMeans(denoise.Image(u), mode=mode)
+            assert np.allclose(nlm.pad(u), us_[mode])
+
+    def test_get_threshold(self, subtract_mean):
+        sigma = 0.4
+        for dx, dy, percentile in product(range(2, 5), range(2, 5), [50, 98]):
+            nlm = denoise.NonLocalMeans(
+                denoise.Image(), sigma=sigma, dx=dx, dy=dy, subtract_mean=subtract_mean
+            )
+            Nsamples = 1000
+            th_ = nlm.get_threshold(percentile=percentile)
+            okay = False
+            for n in range(4):
+                # Try 4 times.
+                th = nlm.get_threshold(percentile=percentile, Nsamples=Nsamples)
+                okay = np.allclose(th_, th, rtol=2 / np.sqrt(Nsamples))
+                if okay:
+                    break
+            assert np.allclose(th_, th, rtol=2 / np.sqrt(Nsamples))
