@@ -323,3 +323,165 @@ def dE(u):
 u_restored = grad_descent(x0,E,dE)
 ```
 
+Part 2: PQ Denoising
+
+A generalization of our energy functional allows us to take powers of our norms.
+
+$$E(u) = \frac{1}{p}\|\nabla u\|^p + \lambda \frac{1}{q}\|u-f\|^q$$
+
+But the case where $p = q = 1$ is exceptionally interesting for its connection to something called the **flat norm**, which we will build up to now.
+
+The flat norm provides a sense of distance in the space of currents. Currents are the generalized surfaces of geoemetric measure theory. Currents may be realtively tame, or they may be extremely wild objects. We will construct relatively tame objects of currents to build intuition for what they are.
+
+Assume that we have some kind of 2-dimensional surface $M$ in $\mathbb{R}^3$. We can assign a two-vector $\xi(x)$ at each point $x$ of the surface so that each pair spans a small parallelogram tangent to the surface at the point where they are anchored.
+
+If we are then handed a 2-form, which is a function $\omega$ that takes in said 2-vector parallelogram $\xi(x)$ at the point $x$ and produces a real number $\omega(\xi(x))$ (for instance, possibly by projecting the parallelogram down onto the xy-plane and yielding the area there) we have a scalar valued function defined on the surface and can thus integrate it with the appropriate dimension (Hausdorff) measure $\int_M \omega(\xi(x))d\mathcal{H}^2(x)$ to get a number.
+
+For a fixed $k$-dimensional surface $M$ we may view this integral above as a linear map $T_M$ which assigns $k$-forms $\omega \mapsto \int_M \omega(\xi(x))d\mathcal{H}^k(x) \in \R$ to real numbers (it inherits linearity from the integral). This object is an example of a current, and a particularly nice one. Most generally, a current may be an arbitrary element of the dual space to differential forms.
+
+The flat norm works by decomposing a current into two pieces, and then each piece is measured differently. The flat norm then finds the minimum over all such decompositions.
+
+Recall that if $S$ is a $k+1$ dimensional object, then its boundary is $k$ dimensional. i.e the boundary of a 2-d disk is a 1-d circle, the boundary of a 3-d ball is a 2-d sphere. If $T$ is a $k$-dimesional current and $S$ is a $k+1$ dimensional current, then we can write:
+
+$$T = (T-\partial S) + \partial S$$
+
+In measuring the "mass" of the above object, we expect to simply get the mass of $T$ which is not particularly useful. However we can measure $T-\partial S$ as normal $M(T-\partial S)$ but then instead of adding on the mass of the boundary of $S$, we can measure $S$ itself. The definition of the flat norm is:
+
+$$F(T) = \min_{S} (M(T-\partial S) + M(S))$$
+
+We can add some control to the above by adding in the parameter $\lambda = \frac{1}{r}$ where $r$ is the minimum radius of curvature of level sets in the minimizer. We then get:
+
+$$F_\lambda(T) = \min_{S} (M(T-\partial S) + \lambda M(S))$$
+
+*image of flat norm decomposition*
+
+We may view the $L^1TV$ functional (the case with $p = q = 1$) as a special case of the flat norm for currents that are boundaries of $n$-dimensional sets in $\mathbb{R}^n$. 
+
+$$f(u) = \int_R |\nabla u|dx + \lambda \int_R |u-d|dx$$
+
+Suppose that $d = \chi_\Omega$ is an indicator (characteristic) function defined by:
+
+$$\chi_\Omega(x) = \begin{cases} 1 & x \in \Omega\\ 0 & x \not \in \Omega\end{cases}$$
+
+It is then a theorem that in this case $f(u)$ has a minimizer $u = \chi_\Sigma$ which is also a characteristic function. Hence we restrict to minimizing over characteristic functions when the data $d$ is a characteristic function.
+
+Suppose then $u = \chi_\Sigma$ and $d = \chi_\Omega$. Then $f(u) = \int_R |\nabla u| dx + \lambda \int_R |u-d|dx = M(\partial \Sigma) + \lambda M(\Sigma \Delta \Omega)$ where $\Sigma \Delta \Omega$ is the symmetric difference between $\Sigma$ and $\Omega$ and is the set of points that are in either $\Sigma$ or $\Omega$ but not both.
+
+If we give $\Sigma$ a multiplicity of $-1$ and $\Omega$ a multiplicity of $1$ and add them we get a current $S_{\Sigma \Delta \Omega}$ that turns $T_\Omega$ into $T_\Sigma$, i.e.
+
+$$T_\Sigma = T_\Omega - S_{\Sigma \Delta \Omega}$$
+
+Which implies
+
+$$T_{\partial \Sigma} = T_{\partial \Omega} - S_{\partial(\Sigma \Delta \Omega)}$$
+
+Since $S_{\partial(\Sigma \Delta \Omega)} = \partial S_{\Sigma \Delta \Omega}$ we can write:
+
+$$T_{\partial \Omega} = (T_{\partial \Omega} - \partial S_{\Sigma \Delta \Omega}) + \partial S_{\Sigma \Delta \Omega}$$
+
+$$T_{\partial \Omega} = T_{\partial \Sigma} + \partial S_{\Sigma \Delta \Omega}$$
+
+So the flat norm $\mathbb{F}_\lambda$ is given by:
+
+\begin{align*}
+\mathbb{F}_\lambda(T_{\partial \Omega}) &= \min_{S_{\Sigma \Delta \Omega}}(M(T_{\partial \Sigma}) + \lambda M (S_{\Sigma \Delta \Omega}))\\
+&= \min_{\Sigma \Delta \Omega}(\text{perimeter}(\Sigma) + \lambda |\Sigma \Delta \Omega |)\\
+&= \min_\Sigma \int_R |\nabla \chi_\Sigma|dx + \lambda \int_R |\chi_\Sigma - \chi_\Omega|dx\\
+&= \min_u \int_R |\nabla u|dx + \lambda \int_R |u-\chi_\Omega | dx
+\end{align*}
+
+### Graph-Based Methods
+
+![](figures/image_heat_graph_flow.png)
+
+We can think of an image as a graph by taking the pixels to be vertices whose value is the intensity of that pixel. Color channels may analyzed separately or together depending on the application. A typical representation then connects each vertex to its 4 nearest neighbors defined by the original image to generate a gridlike structure.
+
+If we like, for a particular image $u$ we may solve the heat equation, which is in general tantamount to minimizing $\int |\nabla u|^2$. Notice however that there is no data fidelity term here, and so when you put a $u$ in and try to minimize the solutions will simply flow downhill to a constant image and do not need to stay close to the original in any way. If you recall from PDEs, letting the solution run is equivalent to repeatedly convolving $u$ with a heat kernel, which brings a particular point closer to the average value of its neighbors. 
+
+On a graph we can also solve the heat equation by calculating for a particular vertex a new value based on the average between it and its 4 neighbors. This will smooth the original image and hence get rid of noise, but the difficulty in this of course is that the strong smoothing properties will end up smoothing over and hence destroying edges. We can however devise workarounds that preserve the edges in our image.
+
+Suppose in the following graph that the red vertices have a value that is different than the blue vertices. Then the edges marked with green represent a difference between neighbors. One possible technique is to strongly weight those edges connecting like neighbors to preserve data there. Another is to only connect vertices to like vertices in the first place, so that very different neighboring pixels are not communicating in the graph.
+
+![](figures/weighted_image_graph.png)
+
+In particular we may choose to start from the ground up and make sparse connections only to those vertcies that should be talking, or we could choose to start from a complete graph and prune those edges that we don't want. 
+
+First we'll try working from the ground up. Suppose we have our pixels as above, each is connected to its 4 nearest neighbors by an edge and then we weight the edge $e_{ji}$ which connects pixel $p_i$ and $p_j$ by $w_{ji} = |d(p_i)-d(p_j)|$ where $d(p)$ indicates the intensity of the pixel $p$. 
+
+Now we find the minimal spanning tree for our graph; that is we find a path through the graph that touches every vertex so that the sum of the weights on the edges we go through is as small as possible. We then run our averaging algorithm on the minimal spanning tree. Because the minimal spanning tree will not generally make very expensive connections (i.e. connect two pixels with very different values) when we average over neighboring values, our algorithm will not smooth over boundaries (except perhaps in a single spot, since the tree will be connected).
+
+![](figures/minimal_spanning_tree_smoothing.png)
+
+There is one small problem however: the minimal spanning tree will not preserve much information about neighbors in general. Pixels that are similar and spatially close on the image may be considered to be far apart in the graph because of the minimal structure. There are things we may do about this: we could for instance go back after finding the minimal spanning tree and add in edges that cost below some given threshold - this will make our smoothing a bit more effective.
+
+For nonlocal means the technique is quite different. First, we plot our pixels as vertices just like normal, but then instead of connecting each pixel to its 4 nearest neighbors we instead connect each pixel to *every* other pixel to form a complete graph. We then assign weights to each edge based on the similarity of pixel neighborhoods and smooth the resulting graph.
+
+Specifically, for each pixel $p_i$ we let its $(2k+1)\times (2k+1)$ neighborhood of pixel values represent $p_i$ in $\mathbb{R}^{(2k+1)^2}$. I.e. if $k = 3$ then every $p_i$ generates a point $n_i$ in 49 dimensional Euclidean space.
+
+We then compute $w_{ij} = \| n_i - n_j \|$ for all $i,j$ pairs.
+
+For each $p_i$ we then select only those edges $e_{ij}$ such that $w_{ij}$ are the smallest measure of the possible $w_{ij}$'s.
+
+We then prune all edges from the complete graph that have not been selected and smooth over this resulting graph.
+
+### Graph Laplacian
+
+In working with graphs, it's often useful to employ a meaningful notion of a Laplacian on the graph.
+
+Recall the definition of the second-order central finite difference method:
+
+$$f''(x) \approx \frac{f(x+h)-2f(x)+f(x-h)}{g^2}$$
+
+Where $h$ is the distance between $x$ and two points that are sampled to do the calculation. If we consider a discrete segment of the real line and let $h = 1$ then by the above the second derivative at a point is given by:
+
+$$f''(x) \approx \text{value at previous point} -2 \cdot \text{value at current point} + \text{value at next point}$$
+
+The above definition works fine for graphs equivalent to a line of points. If we have a grid of points in a graph then the second derivative becomes the Laplacian and if $p_1, p_2, p_3, p_4$ are the nearest neighbors of the point $p$ on the graph $u$ then:
+
+$$\Delta u(p) = d(p_1) + d(p_2) + d(p_3) + d(p_4) - 4 d(p)$$
+
+In other words, the average difference between the point and its 4 nearest neighbors on the grid.
+
+### Min-cut max-flow and the $L^1TV$
+
+Suppose that we have a 1-d image (a signal) which we can represent as the graph of a function from $\mathbb{R}\to \mathbb{R}$. We may choose then to view this function as a set $\Omega$ of points in the domain, where the function takes a nonzero value that point is in the set and where the value is zero the point is not in the set.
+
+![](figures/mincut_1.png)
+
+In the above figure the points with a green bar above them are in the set and the points with an orange bar below them are not in the set. Hence we have converted $\Omega$ to a characteristic function, and so we also expect our solution to be a characteristic function.
+
+Recall that for sets that $L^1TV$ we have:
+
+$$F(\chi_\Sigma) = \text{per}(\Sigma) + \lambda|\Sigma \Delta \Omega|$$
+
+One way to calculate this functional is by drawing a source and a sink node and connecting each point in our set to the source and all the points not in our set to the sink, which will form an initial input.
+
+![](figures/mincut_2.png)
+
+We then add weights $\lambda$ to those connections and a value of $1$ to each horizontal connection between the points.
+
+Nowe we create a cut between the source and the sink which defines a candidate $\Sigma$. Whenever we go up or down we are charged 1 for the jump as it adds 1 to the perimeter (total variation), and we are charged $\lambda$ where we disagree with the original $\Omega$ (exactly like $\lambda|\Sigma \Delta \Omega|$). For the illustration below, we are including in $\Sigma$ all the points above the pink cut and disregarding points below the pink cut.
+
+![](figures/mincut_3.png)
+
+In two dimensions we may cover our image (as a characteristic function) with lines and then correctly add up all of the crossings to get a rough approximation of Crofton's formula, which says that if we fix a line at the origin and rotate it through space, projecting the number of times said line intersects a curve $\varphi$ at a given angle $\theta$ then integrate that function $h(\theta)$ we will get a number proportional to the length of the curve.
+
+$len(\varphi) = c \int_0^{2\pi}h(\theta)d\theta$
+
+![](figures/croftons.png)
+
+So to approximate this we take a grid:
+
+![](figures/croftons_approximation.png)
+
+And at each crossing we get an edge with the value of the difference in height of the characteristic function, 1. We then need to compute weights for these crossings based on the spacing of our lines. We can then form a graph with a source and a sink as before and find the minimum cut.
+
+Alternatively to the Crofton's approximation method (which may not always be so great since there are not enough directions) we could directly compute weights based on the directions in a $5\times 5$ grid.
+
+![](figures/mincut_4_neighbors.png)
+
+Normally there would be 16 directions to consider, but due to symmetry we only need to calculate 3 weights. We can calculate these weights directly by determining what would minimize the error for any unit vector input.
+
+I.e. imagine a plane with slope one in any possible direction and making it so the integrated errors over all possible directions is minimized - this yields better weights than the Crofton method. Essentially the algorithm approximates the norm $|\nabla u|$ in the total variation term with a polygonal approximation
+
+![](figures/mincut_5_norm.png)
