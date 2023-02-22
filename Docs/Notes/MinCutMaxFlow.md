@@ -37,15 +37,13 @@ im.show(l1tv.denoise1(threshold=0.2), u_noise, im.get_data(sigma=0))
 ```
 
 ```{code-cell} ipython3
-
-```
-
-```{code-cell} ipython3
+%%time
 d = denoise.Denoise(im, p=1, q=1, lam=2/2)
 u = d.minimize(callback=None)
 ```
 
 ```{code-cell} ipython3
+%%time
 ths = np.linspace(u_noise.min(), u_noise.max(), 10)
 us = list(map(l1tv.denoise1, ths))
 im.show(*us)
@@ -53,34 +51,6 @@ im.show(*us)
 
 ```{code-cell} ipython3
 im.show(u)
-```
-
-# Nonlocal Means
-
-```{code-cell} ipython3
-import numpy as np
-np.dot
-```
-
-```{code-cell} ipython3
-import numpy as np
-from importlib import reload
-from math_583 import denoise; reload(denoise)
-im = denoise.Image()
-u_noise = im.get_data(sigma=0.4)
-im.show(u_noise)
-nlm = denoise.NonLocalMeans(im)
-#O = nlm.compute_overlaps()
-```
-
-```{code-cell} ipython3
-Nx, Ny = u_noise.shape
-l = np.zeros((Nx,Ny,Nx,Ny))
-l += 2
-```
-
-```{code-cell} ipython3
-np.mod([1,2], 2)
 ```
 
 # L1TV

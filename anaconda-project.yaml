@@ -36,8 +36,9 @@ commands:
   # Needs to be explicitly called until we can run scripts on prepare
   # https://github.com/Anaconda-Platform/anaconda-project/issues/239
   init:
-    unix: python3 -m ipykernel install --user --name "math-583" --display-name
-      "Python 3 (math-583)"
+    unix: |
+      python3 -m ipykernel install --user --name "math-583" --display-name "Python 3 (math-583)"
+      jupyter nbextension enable jupyter-black-master/jupyter-black
     env_spec: math-583
 
   clean:
@@ -117,6 +118,7 @@ dependencies:
   - pytest-html
   - pytest-xdist
   - black
+  - conda-forge::jupyter-black
   - yapf
 
   # Documentation
