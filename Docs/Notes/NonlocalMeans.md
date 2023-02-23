@@ -446,7 +446,7 @@ dists = n.compute_dists(u_=u_)
 ```
 
 ```{code-cell} ipython3
-u = n.denoise(u_noise, dists=dists, u_=u_, percentile=99)
+u = n.denoise(u_noise, dists=dists, u_=u_, percentile=95)
 im.show(u, u_noise, u_exact)
 ```
 

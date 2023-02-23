@@ -1,5 +1,6 @@
 """Tools for exploring image denoising.
 """
+from collections import namedtuple
 from functools import partial
 import io
 import itertools
@@ -1063,11 +1064,20 @@ class NonLocalMeans(Base):
         raise ValueError(f"Unsupported {self.mode=}")
 
     def dist(self, A, B):
-        """Return the distance between patches A and B."""
+        """Return the (d), or (d, dAB_), the distance between patches A and B.
+
+        If self.subtract_mean, then the mean dAB_ of the patch difference is also
+        returned.  This is subtracted in d, but must be added back when reconstructing
+        the image,
+        """
         dAB = A - B
         if self.subtract_mean:
-            dAB -= dAB.mean()
-        return (dAB**2).mean()
+            dAB_ = dAB.mean()
+            dAB -= dAB_
+        d = (dAB**2).mean()
+        if self.subtract_mean:
+            return [d, dAB_]
+        return d
 
     def ixy(self, i, Nx=None):
         """Return the pixel index (ix, iy) of patch i.
@@ -1153,10 +1163,11 @@ class NonLocalMeans(Base):
             Nx, Ny = np.subtract(u_.shape, (dx - 1, dy - 1))
 
         Np = Nx * Ny
+        dist_zero = [0, 0] if self.subtract_mean else 0
         if self.symmetric:
             dists = np.array(
                 [
-                    [0] * (i1 + 1)
+                    [dist_zero] * (i1 + 1)
                     + [
                         self.dist(self.get_patch(i0, u_=u_), self.get_patch(i1, u_=u_))
                         for i0 in range(i1 + 1, Np)
@@ -1164,7 +1175,8 @@ class NonLocalMeans(Base):
                     for i1 in range(Np)
                 ]
             )
-            dists += dists.T
+            # Transpose only on the first two indices
+            dists += np.einsum("ab...->ba...", dists)
         else:
             dists = np.array(
                 [
@@ -1178,7 +1190,14 @@ class NonLocalMeans(Base):
         return dists
 
     def denoise(
-        self, u=None, percentile=96, Nmin=0, f_weight=None, dists=None, u_=None
+        self,
+        u=None,
+        percentile=96,
+        Nmin=0,
+        f_weight=None,
+        dists=None,
+        u_=None,
+        debug=False,
     ):
         """Denoise the image u.
 
@@ -1189,6 +1208,9 @@ class NonLocalMeans(Base):
             away.  Default is a constant.
         dists, u_ :
             If provided, used to improve performance.
+        debug : bool
+            If True, then return a named tuple with intermediate information like the
+            dists for analysis.
         """
         if u is None:
             u = self.u_noise
@@ -1203,7 +1225,7 @@ class NonLocalMeans(Base):
         if self.symmetric:
             ds = sorted(
                 [
-                    (dists[i0, i1], (i0, i1))
+                    (dists[i0, i1].tolist(), (i0, i1))
                     for i1 in range(Np)
                     for i0 in range(i1 + 1, Np)
                 ]
@@ -1211,7 +1233,7 @@ class NonLocalMeans(Base):
         else:
             ds = sorted(
                 [
-                    (dists[i0, i1], (i0, i1))
+                    (dists[i0, i1].tolist(), (i0, i1))
                     for i1 in range(Np)
                     for i0 in range(Np)
                     if i0 != i1
@@ -1226,14 +1248,18 @@ class NonLocalMeans(Base):
 
         G = {}
         threshold = self.get_threshold(percentile=percentile)
-        for (d, (i0, i1)) in ds:
+        for (d_, (i0, i1)) in ds:
+            d = d_
+            if self.subtract_mean:
+                d, dAB_ = d_
             neighbours = G.setdefault(i0, [])
+
             if d <= threshold or len(neighbours) < Nmin:
-                neighbours.append((i1, d))
+                neighbours.append((i1, d_))
             if self.symmetric:
                 neighbours = G.setdefault(i1, [])
                 if d <= threshold or len(neighbours) < Nmin:
-                    neighbours.append((i0, d))
+                    neighbours.append((i0, d_))
 
         # Actually denoise the image.
         u_clean = []
@@ -1248,14 +1274,18 @@ class NonLocalMeans(Base):
                 i1x, i1y = self.ixy(i1)
                 offset = 0
                 if self.subtract_mean:
+                    d, offset = d1
                     P1 = self.get_patch(i1, u_=u_)
-                    offset = (P0 - P1).mean()
 
                 us.append(u[i1x, i1y] + offset)
                 ws.append(f_weight(d1))
 
             u_clean.append(np.dot(us, ws) / sum(ws))
-        return np.array(u_clean).reshape((Ny, Nx)).T
+        u_clean = np.array(u_clean).reshape((Ny, Nx)).T
+        if not debug:
+            return u_clean
+        DebugResults = namedtuple("DebugResults", ["u_clean", "u_", "dists", "G"])
+        return DebugResults(u_clean=u_clean, u_=u_, dists=dists, G=G)
 
 
 class CharacteristicGraphs(Base):
@@ -1350,7 +1380,8 @@ class CharacteristicGraphs(Base):
             V.update({va, vb})
             E.add(e)
             edges.set_description(
-                f"{len(V)} of {len(self.V0)}: {len(clusters)} clusters")
+                f"{len(V)} of {len(self.V0)}: {len(clusters)} clusters"
+            )
             if V == self.V0:
                 break
 
@@ -1455,82 +1486,3 @@ class CharacteristicGraphs(Base):
         ax.add_collection(LineCollection(segments, **kw))
         ax.autoscale()
         ax.set(aspect=1)
-
-
-class NonLocalMeans(Base):
-    """Non-local means denoising by brute force.
-
-    Attributes
-    ----------
-    image : Image
-        Instance of :class:`Image` with the image data.
-    extent : int
-        Extent of matching region on each side of the pixel.
-    weights : array-like, None
-        Weight array for matching.  If not provided, then
-        weights = np.ones((2*extent+1,)*2).
-    sigma : float
-        Standard deviation (as a fraction) of gaussian noise to add to the image.
-    """
-
-    image = None
-    extent = 2
-    weights = None
-    sigma = 0.5
-    seed = 2
-
-    def norm(self, u):
-        return np.linalg.norm(u.ravel(), ord=2)
-
-    def __init__(self, image, **kw):
-        super().__init__(image=image, **kw)
-
-    def init(self):
-        self.Nx, self.Ny = self.image.shape
-        if self.weights is None:
-            self.weights = np.ones((2 * self.extent + 1, ) * 2)
-        else:
-            assert np.all(1 == np.mod(self.weight.shape, 2))
-        self.rng = np.random.default_rng(seed=self.seed)
-        self.u_exact = self.image.get_data(sigma=0, normalize=True)
-        self.u_noise = self.image.get_data(sigma=self.sigma,
-                                           normalize=True,
-                                           rng=self.rng)
-
-    def ixy(self, n):
-        """Return (ix, iy) from linear index n into overlap array."""
-        Nx, Ny = self.image.shape
-        ex, ey = [(_e - 1) // 2 for _e in self.weights.shape]
-        nx, ny = Nx - 2 * ex, Ny - 2 * ey
-        iy = ey + n % ny
-        ix = ex + n // ny
-        return (ix, iy)
-
-    def n(self, ix, iy):
-        """Return linear index n in overlap array from (ix, iy)."""
-        Nx, Ny = self.image.shape
-        ex, ey = [(_e - 1) // 2 for _e in self.weights.shape]
-        nx, ny = Nx - 2 * ex, Ny - 2 * ey
-        return (iy - ey) + ny * (ix - ex)
-
-    def compute_overlaps(self, u=None):
-        if u is None:
-            u = self.u_noise
-        u = np.asarray(u).astype(float)
-
-        Nx, Ny = u.shape
-        ex, ey = [(_e - 1) // 2 for _e in self.weights.shape]
-        rx, ry = range(ex, Nx - ex), range(ey, Ny - ey)
-        # Nx_, Ny_ = Nx - 2 * ex, Ny - 2 * ey
-
-        N = len(rx) * len(ry)
-        overlaps = set()
-        for n in tqdm(range(N - 1)):
-            for m in range(n + 1, N):
-                (nx, ny), (mx, my) = self.ixy(n), self.ixy(m)
-                err = self.norm(self.weights *
-                                (u[nx - ex:nx + ex + 1, ny - ey:ny + ey + 1] -
-                                 u[mx - ex:mx + ex + 1, my - ey:my + ey + 1]))
-                overlaps.add((err, (m, n)))
-
-        return sorted(overlaps)
