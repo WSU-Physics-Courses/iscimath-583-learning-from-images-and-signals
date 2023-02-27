@@ -38,7 +38,7 @@ its **adjacency matrix** $\mat{A}$ by first labeling the vertices by an index $i
 \in V$ such that we can refer to the vertex by $i$.  Thus, we will refer to the edge $e
 = (v_i, v_j) \equiv (i, j)$.  The (unweighted) adjacency matrix $\mat{A}$ is
 \begin{gather*}
-  \mat{A}_{ij} = A_{ij} = \begin{cases}
+  [\mat{A}]_{ij} = a_{ij} = \begin{cases}
     1 & \text{if } (v_i, v_j) \in E,\\
     0 & \text{otherwise.}
   \end{cases}

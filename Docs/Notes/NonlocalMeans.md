@@ -20,16 +20,23 @@ import logging;logging.getLogger('matplotlib').setLevel(logging.CRITICAL)
 %matplotlib inline
 import numpy as np, matplotlib.pyplot as plt
 from IPython.display import clear_output, display
+from myst_nb import glue
 ```
 
 (sec:NonlocalMeans)=
 # Non-local Means
 
-+++
+The idea behind the non-local means algorithm is that random noise can be reduced by
+averaging.  The challenge is to find pixels with random noise that can be averaged.  One
+obvious solution is to take multiple pictures of the same object, then to average over
+images.  Another approach is useful if the underlying image is smooth.  In this case,
+one might obtain a reduction in noise by averaging nearby pixels, at the cost of
+slightly bluring the image.
 
-The idea behind the non-local means algorithm is that random noise can be reduced by averaging.  The challenge is to find pixels with random noise that can be averaged.  One obvious solution is to take multiple pictures of the same object, then to average over images.  Another approach is useful if the underlying image is smooth.  In this case, one might obtain a reduction in noise by averaging nearby pixels, at the cost of slightly bluring the image.
-
-The idea of non-local means is to find regions of the image that are similar to use for averaging, but to allow these regions to 
+The idea of non-local means is to find regions of the image that are similar to use for
+averaging, but to allow these regions to be spatially separated (non-local).  This
+allows one to take advantage of repetition of features image such as repeated features
+like windows, straight edges like streets or buildings.
 
 :::{admonition} [Photographing a Black Hole][]
 
@@ -37,19 +44,15 @@ I think that this was the approach used to produce the image with the [Event Hor
 
 :::
 
-[EHT]: <https://eventhorizontelescope.org/>
-[Photographing a Black Hole]: <https://www.nasa.gov/image-feature/photographing-a-black-hole>
-
 +++
 
-## Noise and Probabilies
+## Noise Reduction: Adding Gaussian Variables
 
-+++
-
-To make this quantitative, we consider Gaussian noise $η \sim \mathcal{N}(0, σ^2)$ with zero mean and standard deviation $σ$ with a [probability density function (PDF)][PDF]
+To make this quantitative, we consider Gaussian noise $η \sim \mathcal{N}(0, σ^2)$ with
+zero mean and standard deviation $σ$ with a [probability density function (PDF)][PDF]
 
 \begin{gather*}
-  p(η) = \frac{1}{\sqrt{2π σ^2}}\exp\left(\frac{-x^2}{2σ^2}\right).
+  p(η) = \frac{1}{\sqrt{2π σ^2}}\exp\left(\frac{-(η-μ)^2}{2σ^2}\right).
 \end{gather*}
 
 When we add Gaussian variables, we find:
@@ -57,12 +60,10 @@ When we add Gaussian variables, we find:
 \begin{gather*}
   η_1 \sim \mathcal{N}(μ_1, σ_1^2), \qquad
   η_2 \sim \mathcal{N}(μ_2, σ_2^2), \qquad
-  aη_1 + bη_2 \sim \mathcal{N}(aμ_1 + bμ_2, (aσ_1)^2 + (bσ_2)^2).
+  aη_1 + bη_2 \sim \mathcal{N}\bigl(aμ_1 + bμ_2, (aσ_1)^2 + (bσ_2)^2\big).
 \end{gather*}
 
 *If you don't know this, you should derive it.  Here we check it numerically.*
-
-[PDF]: <https://en.wikipedia.org/wiki/Probability_density_function>
 
 ```{code-cell} ipython3
 %matplotlib inline
@@ -94,24 +95,36 @@ ax.hist(η12, label='$η_1+η_2$', **args)
 ax.plot(x, N1.pdf(x), 'C0')
 ax.plot(x, N2.pdf(x), 'C1')
 ax.plot(x, N12.pdf(x), 'C2')
+ax.set(xlabel="η")
 ax.legend();
 ```
 
-Thus, if we take the average of $N$ samples $x=x_0 + η$, each with the same noise $η \sim \mathcal{N}(0, σ^2)$, then
+:::{margin}
+Note that the reduction comes from the denominator: the sum has a large variance $Nσ^2$,
+but dividing by $N$ reduces $σ \rightarrow σ/N$, resulting in the overall reduction in
+the variance $σ^2\rightarrow σ^2/N$.
+:::
+Thus, if we take the average of $N$ samples $x=x_0 + η$, each with the same noise $η
+\sim \mathcal{N}(0, σ^2)$, then
 
 \begin{gather*}
   \bar{x} = \frac{x_1 + x_2 + \cdots + x_N}{N}, \qquad
   \bar{x} \sim \mathcal{N}(x_0, σ^2/N).
 \end{gather*}
 
-I.e., the standard deviation $σ \rightarrow σ/\sqrt{N}$ is thus reduced by a factor of $\sqrt{N}$.  This is the essense of denoising by averaging.
+I.e., the standard deviation $σ \rightarrow σ/\sqrt{N}$ is thus reduced by a factor of
+$\sqrt{N}$.  This is the essense of denoising by averaging. 
 
-+++
+### Patches
 
-The second aspect of non-linear means is that we must define a measure that describes the **distance** between two pixels such that large values of this distance mean that the pixels are not similar, but small distances mean that the pixels are similar and suitable for averaging.
+The second aspect of non-linear means is that we must define a measure that describes
+the **distance** between two pixels such that large values of this distance mean that
+the pixels are not similar, but small distances mean that the pixels are similar and
+suitable for averaging.
 
 :::{margin}
-Note: in terms of the data, we index as `u[ix, iy]` – so-called `'ij'` indexing.  This corresponds to going down first, then across.  I.e. for a $2×3$ array
+Note: in terms of the data, we index as `u[ix, iy]` – so-called `'ij'` indexing.  This
+corresponds to going down first, then across.  I.e. for a $2×3$ array
 \begin{gather*}
   \mat{u} = \begin{pmatrix}
     0 & 3\\
@@ -119,7 +132,8 @@ Note: in terms of the data, we index as `u[ix, iy]` – so-called `'ij'` indexin
     2 & 5
   \end{pmatrix}.
 \end{gather*}
-By convention, when we display images, we display the *transpose* of this, so that $i_x$ goes *across* the image first:
+By convention, when we display images, we display the *transpose* of this, so that $i_x$
+goes *across* the image first:
 \begin{gather*}
   \text{image} = \begin{bmatrix}
     0 & 1 & 2\\
@@ -127,24 +141,72 @@ By convention, when we display images, we display the *transpose* of this, so th
   \end{bmatrix}.
 \end{gather*}
 :::
-We shall label the pixels in our image by an index $i \in \{0, 1, \dots , N_xN_y -1\}$ corresponding to the pixel $(i_x, i_y)$ in the image where
+We shall label the pixels in our image by an index $i \in \{0, 1, \dots , N_xN_y -1\}$
+corresponding to the pixel $(i_x, i_y)$ in the image where
 \begin{gather*}
   i = i_x + N_x i_y.
 \end{gather*}
-We will compute our distance between pixels by comparing **patches** of shape `(dx, dy)` centered on the pixel.
+We will compute our distance between pixels by comparing **patches** of shape `(dx, dy)`
+centered on the pixel.
 
-One can play with many different distance functions $d(i, j)$: here we shall only consider one, which is the average of the square of the differences between each patch, optionally subtracting the mean (`subtract_mean=True` in the code).
+One can play with many different distance functions $d(i, j)$: here we shall only
+consider one, which is the average of the square of the differences between each patch,
+optionally subtracting the mean (`subtract_mean=True` in the code).
 
-If the patches match exactly except for the noise, then this corresponds to the average of the square of $N=d_xd_y$ differences $\sum (η_i - η_j)^2 / N$.  How are such quantities distributed?  The sum of the squares of $N$ normally distributed variables is the famous [chi-squared distribution][]:
+If the patches match exactly except for the noise, then this corresponds to the average
+of the square of $N=d_xd_y$ differences $\sum_{i=1}^{N} (η^{(A)}_i - η^{(B)}_i)^2 / N$ of
+the noise $\eta^{(A,B)}_{i}$ in the $i$'th pixel of patch $A$ and $B$ respectively.  How are such
+quantities distributed?  The answer can be expressed in terms of the famous [chi-squared
+distribution][].
+
+:::{margin}
+The standard [chi-squared distribution][] has the following mean $k$ and variance $2k$.
+:::
+The [chi-squared distribution][] is sum of the squares of $N$ normally distributed
+variables with unit variance $\sigma^2=1$:
 \begin{gather*}
-  \chi^2 = \sum_{i=1}^{N} η_i^2, \qquad
+  \chi^2 = \sum_{i=1}^{N} η_i^2 \sim \chi^2(k=N), \qquad
   p(\chi^2; N) = \frac{(\chi^2)^{\frac{N}{2}-1}e^{-\chi^2/2}}{2^{N/2}\left(\frac{N}{2}-1\right)!}.
 \end{gather*}
-Here the parameter $N$ is referred to as the number of **degrees of freedom**.  If we subtract that mean, then we need to reduce this by one $p(\chi^2; N-1)$ (see [Cochran's theorem][]).  The various properties of this distribution are codified in {data}`scipy.stats.chi2`.  In our case, we need to adjust the scale by a factor of $2σ^2/N$ and set the correct number of degrees of freedom $N$ or $N-1$ depending on `subtract_mean`.
+Here the parameter $N$ is referred to as the number of **degrees of freedom**.
+Alternatively, this can be viewed as the radial distribution of an $N$-dimensional
+[multivariate normal distribution][] with unit covariance $\mat{\Sigma} = \mat{1}$
+(i.e. spherically symmetric):
+:::{margin}
+To get the power of $\chi^{N-2}$ and the factor of $2^{-N/2}$, recall that
+\begin{gather*}
+  \int \d{r}\;\delta\bigl(f(r)-f(x)\bigr)g(r)
+  =
+  \frac{g(x)}{f'(x)}\\
+  =
+  \int \frac{\d{f}}{\d{f}/\d{r}}\;\delta\bigl(f(r)-f(x)\bigr) g(r)\\
+\end{gather*}
+:::
+\begin{gather*}
+  p_{\mathcal{N}(\vect{0}, \mat{1})}(\vect{x})
+  = \frac{1}{\sqrt{(2\pi)^{N}}}\exp\left(\frac{\norm{\vect{x}}_2^2}{2}\right), \\
+  \begin{aligned}
+    P(\chi^2;N) &= \braket{\delta(r^{2}-\chi^2)}_{\mathcal{N}(\vect{0}, \mat{1})} \\
+    &= 
+    \underbrace{\int\d{\Omega_{N}}}
+              _{S_{N-1}=\frac{2\pi^{N/2}}{\Gamma(N/2)}}
+    \int_0^{\infty}\d{r}\;
+    \delta(r^2-\chi^2)r^{N-1}
+    \frac{1}{\sqrt{(2\pi)^{N}}}e^{-r^2/2}\\
+    &=
+    \frac{\chi^{N-2}e^{-\chi^2/2}}
+         {2^{N/2}\Gamma\bigl(\frac{N}{2}\bigr)}.
+  \end{aligned}
+\end{gather*}
 
-
-[Cochran's theorem]: <https://en.wikipedia.org/wiki/Chi-squared_distribution#Cochran's_theorem>
-[chi-squared distribution]: <https://en.wikipedia.org/wiki/Chi-squared_distribution>
+If we subtract that mean, then we need to reduce this by one $p(\chi^2; N-1)$ (see [Cochran's
+theorem][]).  Finally, these results are for $N$ normal variables with unit variance
+$\sigma^2=1$.  Our patch differences are each the difference of 2 normal variables
+$\eta^{(A)} - \eta^{(B)}$ and then we use the mean which includes a factor of $1/N$.
+The resulting distribution is codified in {data}`scipy.stats.chi2` if we include an
+additional scaling factor of $\texttt{scale=}2σ^2/N$ and set the correct number of
+degrees of freedom to $\texttt{df}=N$ or $\texttt{df}=N-1$ depending on the value of
+`subtract_mean`.
 
 ```{code-cell} ipython3
 dx, dy = 2, 2
@@ -153,8 +215,8 @@ N = dx*dy
 
 A, B = rng.normal(scale=σ, size=(2, dx*dy, Ns))
 dAB = A - B
-d0 = (dAB**2).mean(axis=0)
-d1 = ((dAB-dAB.mean(axis=0))**2).mean(axis=0)
+d0 = (dAB**2).mean(axis=0)                     # subtract_mean = False
+d1 = ((dAB-dAB.mean(axis=0))**2).mean(axis=0)  # subtract_mean = True
 
 chi2_0 = sp.stats.chi2(scale=2*σ**2/N, df=N)
 chi2_1 = sp.stats.chi2(scale=2*σ**2/N, df=N-1)
@@ -164,16 +226,204 @@ ax.hist(d1, label="subtract_mean=True", **args);
 x = np.linspace(-0, 0.3, 200)
 ax.plot(x, chi2_0.pdf(x), 'C0')
 ax.plot(x, chi2_1.pdf(x), 'C1')
-ax.set(xlim=(-0.01, 0.3))
+ax.set(xlim=(-0.01, 0.3), xlabel="$d(A, B)$")
 ax.legend();
 ```
 
-Thus, if we know $σ$, and we have perfectly matching patches in our image, we can use the inverse cumulative distribution to determine the **threshold** below which we should average.  This is complicated in the real world where even patches that correspond to a match will have a non-zero distance – even in the abscence of noise.
+Thus, if we know $σ$, and we have perfectly matching patches in our image, we can use
+the inverse cumulative distribution to determine the **threshold** below which we should
+average.  This is complicated in the real world where "matching" patches will still have a
+non-zero distance – even in the absence of noise.
 
-An alternative is to request a certain level of noise reduction $s$, which means that we should average at least $s^2$ pixels.  Here we can sort the data and choose the minimum number.  We provide both options in the code.
+An alternative is to request a certain level of noise reduction $s$, which means that we
+should average at least $s^2$ pixels.  Here we can sort the data and choose the minimum
+number.  We provide both options in the code through the argument `Nsamples` of
+{func}`denoise.NonLocalMeans.get_threshold`.
+
+The situation is more complicated if the patches do not match.  We currently do not have
+a good model or theory for how to deal with this.  Instead, we take a phenomenological
+approach of performing a weighted average with weights.  The default implementation is
+\begin{gather*}
+  f(d) = e^{-d^2/2\sigma^2}
+\end{gather*}
+but $f=$`f_weight` can be specified by the user.  Here
+$\sigma=$`sigma_weight`$(\vect{d})$ is a function of the weights $\vect{d}$ in the 
+"neighbourhood" of the pixel in consideration as defined by the specified threshold or
+`Nsamples`.  The default implementation is
+\begin{gather*}
+  \sigma = \frac{\max\vect{d}}{2\texttt{k_sigma}}.
+\end{gather*}
+
+:::{admonition} To Do (Advanced)!
+
+Can you come up with a rigorous model for which a specific choice of weighting function
+$f(d)$ is optimal in some sense?
+:::
+
+## Demonstration
+
+To demonstrate the non-local means algorithm, we start with an example that should work
+well.  Here we define a repeating $5\times 6$ grid with an overall trend.  The idea is
+that we can average over each of the $5\times 6=30$ repeating units to reduce the
+variance of the noise by factor of $30$.
 
 ```{code-cell} ipython3
-import numpy as np
+import scipy.stats
+from math_583 import denoise
+
+sp = scipy
+
+class TestImage(denoise.Image):
+    dx, dy = 5, 4      # Patch size
+    Npx, Npy = 3, 5    # Number of patches
+    mx, my = 1.0, 2.0  # Slopes of trend
+    
+    def init(self):
+        dx, dy = self.dx, self.dy
+        Npx, Npy = self.Npx, self.Npy
+        Nx, Ny = Npx*dx, Npy*dy
+        x, y = np.ogrid[:Nx, :Ny]
+        u_exact = self.mx * x / Nx + self.my * y / Ny + (x%dx == 0) + (y%dy == 0)
+        self._data = u_exact
+        super().init()
+
+    def denoise(self, u, subtract_mean=True):
+        """Return an "optimally" denoised image using the patch size."""
+        dx, dy = self.dx, self.dy
+        Npx, Npy = self.Npx, self.Npy
+        U = u.reshape((Npx, dx, Npy, dy))
+        U_ = np.zeros([Npx, 1, Npy, 1])
+        if subtract_mean:
+            U_ = U.mean(axis=1).mean(axis=2)[:, None, :, None]
+        u_denoise = ((U - U_).mean(axis=0).mean(axis=1)[None, :, None, :] 
+                     + U_).reshape(u.shape)
+        return u_denoise
+    
+rng = np.random.default_rng(seed=2)
+
+im = TestImage()
+u_exact = im.get_data()
+
+sigma = 0.2
+u_noise = u_exact + rng.normal(scale=sigma, size=u_exact.shape)
+u0 = im.denoise(u_noise)
+glue('Npatch', im.Npx*im.Npy, display=False)
+im.show(u0, u_noise, u_exact)
+```
+
+Here, the denoised image `u` is obtained by averaging over the {glue:}`Npatch` patches.
+Since the image has an overall trend, we first subtract the mean of each patch in `U_`,
+then we average over all the resulting {glue:}`Npatch` patches.  Finally we restore the
+mean for each patch.  The final image `u` thus consists of {glue:}`Npatch` patches, each
+with the original mean, but with the same fluctuations about this mean.
+
+## Quality of Fit Metric 
+
+To quantify the degree of success of our fitting, we define the quality of fit as the
+average square deviation of the pixels:
+\begin{gather*}
+  d(\mat{u}, \mat{u}_\text{exact}) = \sum_{i_x, i_y} 
+  \frac{[\mat{u} - \mat{u}_{\text{exact}}]_{ij}^2}{N_xN_y}
+  = \frac{\norm{\mat{u} - \mat{u}_{\text{exact}}}^2_{2}}{N_x,N_y}.
+\end{gather*}
+
+For a noisy image with Gaussian noise of variance $\sigma^2$, the distance will be
+distributed as
+\begin{gather*}
+  d(\mat{u}, \mat{u}_\text{exact}) \sim \frac{\sigma^2}{N_xN_y} \chi^2(k=N_xN_y).
+\end{gather*}
+After averaging over the {glue:}`Npatch` patches, we expect that the variance should
+down by this factor $\sigma^2 \rightarrow \sigma^2 / ${glue:}`Npatch`, and this is the
+case if we have `subtract_mean=False`.  However, the situation with `subtract_mean=True`
+is more complicated.
+
+:::{admonition} To Do (Advanced).
+
+Can you figure out how the distances are distributed in the case of `subtract_mean=True`
+or with a linear trend in the images?
+:::
+
+```{code-cell} ipython3
+rng = np.random.default_rng(seed=2)
+im = TestImage()
+im_no_trend = TestImage(mx=0, my=0)
+
+Ns = 10000
+
+# Keys are no_trend or (no_trend, subtract_mean)
+
+u_exacts = {
+    False: im.get_data(),
+    True: im_no_trend.get_data(),
+}
+
+noise_dists = {
+  no_trend: []
+  for no_trend in [True, False]
+}
+
+denoise_dists = {
+  (no_trend, subtract_mean): []
+  for no_trend in [True, False]
+  for subtract_mean in [True, False]
+}
+
+sigma = 0.4
+
+for n in range(Ns):
+    for no_trend in [True, False]:
+        u_exact = u_exacts[no_trend]
+        u_noise = u_exact + rng.normal(scale=sigma, size=im.shape)
+        noise_dists[no_trend].append(((u_noise - u_exact)**2).mean())
+        for subtract_mean in [True, False]:
+            key = (no_trend, subtract_mean)
+            u0 = im.denoise(u_noise, subtract_mean=subtract_mean)
+            denoise_dists[key].append(((u0 - u_exact)**2).mean())
+
+args = dict(bins=100, alpha=0.5, density=True)
+
+fig, ax = plt.subplots()
+for dist, c, label in [
+        (noise_dists[True], 'C0', 'noise (trend and no_trend)'),
+        (noise_dists[False], 'C0', ''),
+        (denoise_dists[(True, False)], 'C2', 'denoise: no_trend'),
+        (denoise_dists[(True, True)], 'C4', 'denoise: subtract_mu, (trend and no_trend)'),
+        (denoise_dists[(False, True)], 'C4', ''),
+        (denoise_dists[(False, False)], 'red', 'denoise: trend')]:
+    k = 2*(np.mean(dist)/np.std(dist))**2
+    ax.hist(dist, color=c, label=label, **args)
+
+# We can calculate the distribution in 2 cases:
+# Pure noise: the exact distribution should be a chi^2 distribution from 
+# averaging the square deviation over all df=N pixels.  The averaging needs
+# a scaling sigma**2/N
+df = N = np.prod(im.shape)
+chi2 = sp.stats.chi2(scale=sigma**2/N, df=df)
+x = np.linspace(0, max(noise_dists[True]), 1000)
+ax.semilogx(x, chi2.pdf(x), c="C0")
+
+# No trend and no subtract_mu.  Here we will gain a reduction in noise by 
+# factor = Np, the number of patches.  The final image will be composed of
+# Np identical copies of the average patch, which has df = dx*dy degrees of
+# freedome.  Thus, we will have 
+factor = Np = im.Npx * im.Npy
+# No trend and no subtract_mean means we have df = dx*dy independent degrees of freedom
+# since each patch is repeated multiple times.
+df = im.dx*im.dy
+chi2_denoise = sp.stats.chi2(scale=Np * sigma**2 / N / factor, df=df)
+ax.semilogx(x, chi2_denoise.pdf(x), c="C2")
+
+# Can you figure out the distributions with a trend, or with subtract_mu == True?
+ax.legend()
+ax.set(xlabel="dist(u, u_exact)", ylim=(0, 200), xlim=(0.001, 0.3));
+```
+
+## Non-Local Means
+
+We can now apply our implementation of the non-local means algorithm to see how well it
+performs.
+
+```{code-cell} ipython3
 import scipy.stats
 from importlib import reload
 from math_583 import denoise; reload(denoise)
@@ -182,26 +432,86 @@ sp = scipy
 
 rng = np.random.default_rng(seed=2)
 
-dx, dy = (5, 5)
-Npx, Npy = (5, 6)
-
-Nx, Ny = Npx*dx, Npy*dy
-
-x, y = np.ogrid[:Nx, :Ny]
-u = 0.0 + (x%dx == 0) + (y%dy == 0)
-u = x/Nx + 2*y/Ny + (x%dx == 0) + (y%dy == 0)
-#u = 0*x*y + 0.5
-
-sigma = 0.04
-im = denoise.Image(u)
+sigma = 0.2
+patch_size = 5
+im = TestImage()
 u_exact = im.get_data()
-u_noise = u_exact + rng.normal(scale=sigma, size=(Nx, Ny))
-u0 = np.asarray(np.bmat(
-    [[
-        u_noise.reshape((Npx, dx, Npy, dy)).mean(axis=0).mean(axis=1)
-    ]*Npy]*Npx))
+u_noise = u_exact + rng.normal(scale=sigma, size=im.shape)
+u0 = im.denoise(u_noise, subtract_mean=True)
+nlm = denoise.NonLocalMeans(im, dx=patch_size, dy=patch_size,
+                            mode='reflect', 
+                            sigma=sigma, subtract_mean=True, symmetric=True)
 im.show(u0, u_noise, u_exact)
+err = nlm.dist(u0, u_exact)
+plt.suptitle(f"{err=:.2g}")
+
+# These can be precomputed for speed
+u = nlm.denoise(u_noise, k_sigma=0, percentile='optimize', u_exact=u_exact)
+im.show(u, u_noise, u_exact)
+err = nlm.dist(u, u_exact)
+plt.suptitle(f"{err=:.2g}");
 ```
+
+### Scikit Image
+Here is a comparison with the implementation in
+[scikit-image](https://scikit-image.org/docs/dev/api/skimage.restoration.html#denoise-nl-means):
+
+```{code-cell} ipython3
+from scipy.optimize import minimize_scalar
+from skimage.restoration import denoise_nl_means, estimate_sigma
+kw = dict(patch_size=patch_size, patch_distance=5, fast_mode=False, sigma=sigma)
+_cache = {}
+def err(h_sigma):
+    if not h_sigma in _cache:
+        u = denoise_nl_means(u_noise, h=h_sigma*sigma, **kw);
+        _cache[h_sigma] = nlm.dist(u, u_exact)
+    return _cache[h_sigma]
+res = minimize_scalar(err, bracket=(0.1, 0.5))
+print(f"optimal_h_sigma={res.x:.4g}")
+h_sigma = res.x
+u = denoise_nl_means(u_noise, h=h_sigma*sigma, **kw)
+im.show(u, u_noise, u_exact)
+err = nlm.dist(u, u_exact)
+plt.suptitle(f"{err=:.2g}");
+```
+
+<!--
+```{code-cell} ipython3
+n = denoise.NonLocalMeans(im, mode='reflect', sigma=sigma, subtract_mean=True, symmetric=True)
+u_ = n.pad(u_noise)
+dists = n.compute_dists(u_=u_)
+```
+
+```{code-cell} ipython3
+u = n.denoise(u_noise, dists=dists, u_=u_, percentile=75.0)
+im.show(u, u_noise, u_exact)
+```
+
+```{code-cell} ipython3
+from tqdm.auto import tqdm
+ps = 100 - 10**np.linspace(-1, 1.9, 20)
+#ps = 100 - 10**np.linspace(-7, 0, 20)
+errs = [n.dist(u_exact, n.denoise(u_noise, dists=dists, u_=u_, percentile=_p))
+        for _p in tqdm(ps)]
+#im.show(u, u_noise, u_exact)
+```
+
+```{code-cell} ipython3
+fig, ax = plt.subplots()
+ax.plot(ps, errs)
+ax.axhline(n.dist(u0, u_exact), c='y')
+```
+
+```{code-cell} ipython3
+u = n.denoise(u_noise, dists=dists, u_=u_, percentile=80)
+im.show(u, u_noise, u_exact)
+```
+
+
+
+
+
+
 
 ```{code-cell} ipython3
 def i_(ix, iy):
@@ -408,6 +718,7 @@ n.compute_dists(u).reshape(6, 6)
 
 ```{code-cell} ipython3
 %pylab inline
+import mmf_setup;mmf_setup.nbinit()
 import numpy as np, matplotlib.pyplot as plt
 import scipy.stats
 from importlib import reload
@@ -431,27 +742,92 @@ sigma = 0.1
 im = denoise.Image(u)
 u_exact = im.get_data()
 u_noise = u_exact + rng.normal(scale=sigma, size=(Nx, Ny))
-u0 = np.asarray(np.bmat(
-    [[
-        u_noise.reshape((Npx, dx, Npy, dy)).mean(axis=0).mean(axis=1)
-    ]*Npy]*Npx))
+
+U = u_noise.reshape((Npx, dx, Npy, dy))
+U_ = U.mean(axis=1).mean(axis=2)[:, None, :, None]
+u0 = ((U - U_).mean(axis=0).mean(axis=1)[None, :, None, :] + U_).reshape(u_noise.shape)
 im.show(u0, u_noise, u_exact)
-n = denoise.NonLocalMeans(im, mode='wrap', sigma=sigma, subtract_mean=False)
+n = denoise.NonLocalMeans(im, mode='reflect', sigma=sigma, subtract_mean=True)
 ```
 
 ```{code-cell} ipython3
-n = denoise.NonLocalMeans(im, mode='wrap', sigma=sigma, subtract_mean=True)
+n = denoise.NonLocalMeans(im, mode='reflect', sigma=sigma, subtract_mean=True, symmetric=True)
 u_ = n.pad(u_noise)
 dists = n.compute_dists(u_=u_)
 ```
 
 ```{code-cell} ipython3
-u = n.denoise(u_noise, dists=dists, u_=u_, percentile=95)
+u = n.denoise(u_noise, dists=dists, u_=u_, percentile=75.0)
 im.show(u, u_noise, u_exact)
 ```
 
 ```{code-cell} ipython3
-D = n.compute_dists(u=u_noise)
+from tqdm.auto import tqdm
+ps = 100 - 10**np.linspace(-1, 1.9, 20)
+#ps = 100 - 10**np.linspace(-7, 0, 20)
+errs = [n.dist(u_exact, n.denoise(u_noise, dists=dists, u_=u_, percentile=_p))
+        for _p in tqdm(ps)]
+#im.show(u, u_noise, u_exact)
+```
+
+```{code-cell} ipython3
+fig, ax = plt.subplots()
+ax.plot(ps, errs)
+ax.axhline(n.dist(u0, u_exact), c='y')
+```
+
+```{code-cell} ipython3
+u = n.denoise(u_noise, dists=dists, u_=u_, percentile=80)
+im.show(u, u_noise, u_exact)
+```
+
+```{code-cell} ipython3
+rng = np.random.default_rng(seed=2)
+
+dx, dy = (5, 5)
+Npx, Npy = (5, 6)
+
+Nx, Ny = Npx*dx, Npy*dy
+
+x, y = np.ogrid[:Nx, :Ny]
+u = x/Nx + 2*y/Ny + (x%dx == 0) + (y%dy == 0)
+
+im = denoise.Image(u)
+
+def get_dist(log10p100s=(0.1,), sigma=0.1, dx=5, dy=5, subtract_mean=True, mode='reflect', im=im):
+    """Return (percentiles, [dist(u, u_exact)]).
+    
+    Parameters
+    ----------
+    sigma : float
+        Std of noise.
+    log10p1002 : [float]
+        List of log10(100 - percentile)
+    """
+    Nx, Ny = im.shape
+    u_exact = im.get_data()
+    u_noise = u_exact + rng.normal(scale=sigma, size=(Nx, Ny))
+    n = denoise.NonLocalMeans(im, mode=mode, sigma=sigma, subtract_mean=subtract_mean, dx=dx, dy=dy)
+    u_ = n.pad(u_noise)
+    dists = n.compute_dists(u_=u_)
+    percentiles = 100 - 10**np.asarray(log10p100s)
+    errs = [n.dist(u_exact, n.denoise(u_noise, percentile=_p, dists=dists, u_=u_))
+            for _p in tqdm(percentiles)]
+    return percentiles, errs
+```
+
+```{code-cell} ipython3
+log10p100s = np.linspace(-1.5, 1.5, 20)
+ds = [3, 5, 7]
+ps_errs = [get_dist(log10p100s, dx=_d, dy=_d) for _d in ds]
+```
+
+```{code-cell} ipython3
+fig, ax = plt.subplots()
+for d, (ps, errs) in zip(ds, ps_errs):
+    ax.plot(ps, errs, label=f"dx=dy={d}")
+ax.legend()
+ax.set(xlabel="threshold percentile", ylabel="dist(u, u_exact)")
 ```
 
 ```{code-cell} ipython3
@@ -550,3 +926,12 @@ im.show(u_, vmin=0, vmax=u_.max())
 ```{code-cell} ipython3
 
 ```
+
+-->
+
+[PDF]: <https://en.wikipedia.org/wiki/Probability_density_function>
+[EHT]: <https://eventhorizontelescope.org/>
+[Photographing a Black Hole]: <https://www.nasa.gov/image-feature/photographing-a-black-hole>
+[Cochran's theorem]: <https://en.wikipedia.org/wiki/Chi-squared_distribution#Cochran's_theorem>
+[chi-squared distribution]: <https://en.wikipedia.org/wiki/Chi-squared_distribution>
+[multivariate normal distribution]: <https://en.wikipedia.org/wiki/Multivariate_normal_distribution>

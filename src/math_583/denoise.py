@@ -37,6 +37,9 @@ plt.rcParams["image.cmap"] = "gray"  # Use greyscale as a default.
 __all__ = ["subplots", "Image", "Denoise", "L1TV", "L1TVMaxFlow"]
 
 
+_EPS = np.finfo(float).eps
+
+
 def subplots(cols=1, rows=1, height=3, aspect=1, **kw):
     """More convenient subplots that automatically sets the figsize.
 
@@ -1063,20 +1066,32 @@ class NonLocalMeans(Base):
             return u_
         raise ValueError(f"Unsupported {self.mode=}")
 
-    def dist(self, A, B):
-        """Return the (d), or (d, dAB_), the distance between patches A and B.
+    def dist(self, A, B, _internal=False):
+        """Return the d, or (d, dAB_), the distance between patches A and B and the mean.
 
-        If self.subtract_mean, then the mean dAB_ of the patch difference is also
-        returned.  This is subtracted in d, but must be added back when reconstructing
-        the image,
+        _internal : bool
+            If True, then use self.subtract_mean and return dAB_.  Otherwise do not
+            subtract the mean and return only d.  The latter is useful for users when
+            they want to compute the distance between images.
+
+        Returns
+        -------
+        d : float
+            The distance between A and B.
+        dAB_ : float
+            (A-B).mean().  If self.subtract_mean, then this is subtracted from d, but
+            must be added back when reconstructing the image.  If not
+            self.subtract_mean, then dAB_ is zero.  Only returned if _internal == True.
         """
         dAB = A - B
-        if self.subtract_mean:
+        dAB_ = 0
+        if _internal and self.subtract_mean:
             dAB_ = dAB.mean()
             dAB -= dAB_
+
         d = (dAB**2).mean()
-        if self.subtract_mean:
-            return [d, dAB_]
+        if _internal:
+            return (d, dAB_)
         return d
 
     def ixy(self, i, Nx=None):
@@ -1137,7 +1152,7 @@ class NonLocalMeans(Base):
         size = (2, self.dx, self.dy)
         threshold = np.percentile(
             [
-                self.dist(*rng.normal(scale=self.sigma, size=size))
+                self.dist(*rng.normal(scale=self.sigma, size=size), _internal=True)[0]
                 for _N in range(Nsamples)
             ],
             percentile,
@@ -1152,7 +1167,15 @@ class NonLocalMeans(Base):
         return u_[ix : ix + self.dx, iy : iy + self.dy]
 
     def compute_dists(self, u=None, u_=None):
-        """Return the distances between the patches."""
+        """Return the array of (dist, dAB_) pairs: the distances between the patches.
+
+        Returns
+        -------
+        dist : array-like
+            Array of (dist, dAB_) entries where dist is the distance between the
+            patches, and dAB_ is the mean of the patch difference.  The array thus has
+            shape (Nx*Ny, Nx*Ny, 2)
+        """
         dx, dy = self.dx, self.dy
         if u_ is None:
             if u is None:
@@ -1163,25 +1186,33 @@ class NonLocalMeans(Base):
             Nx, Ny = np.subtract(u_.shape, (dx - 1, dy - 1))
 
         Np = Nx * Ny
-        dist_zero = [0, 0] if self.subtract_mean else 0
         if self.symmetric:
             dists = np.array(
                 [
-                    [dist_zero] * (i1 + 1)
+                    [[0, 0]] * (i1 + 1)
                     + [
-                        self.dist(self.get_patch(i0, u_=u_), self.get_patch(i1, u_=u_))
+                        self.dist(
+                            self.get_patch(i0, u_=u_),
+                            self.get_patch(i1, u_=u_),
+                            _internal=True,
+                        )
                         for i0 in range(i1 + 1, Np)
                     ]
                     for i1 in range(Np)
                 ]
             )
-            # Transpose only on the first two indices
-            dists += np.einsum("ab...->ba...", dists)
+            # Transpose only on the first two indices.  Note that dAB_ changes sign for
+            # the transposed entries.
+            dists += np.einsum("ab...->ba...", dists) * np.array([1, -1])[:, ...]
         else:
             dists = np.array(
                 [
                     [
-                        self.dist(self.get_patch(i0, u_=u_), self.get_patch(i1, u_=u_))
+                        self.dist(
+                            self.get_patch(i0, u_=u_),
+                            self.get_patch(i1, u_=u_),
+                            _internal=True,
+                        )
                         for i0 in range(Np)
                     ]
                     for i1 in range(Np)
@@ -1195,17 +1226,32 @@ class NonLocalMeans(Base):
         percentile=96,
         Nmin=0,
         f_weight=None,
+        sigma_wight=None,
+        k_sigma=1.0,
         dists=None,
         u_=None,
+        u_exact=None,
         debug=False,
     ):
         """Denoise the image u.
 
         Parameters
         ----------
+        percentile : float, 'optimize'
+            Percentile to use for determining the threshold.  See
+            {func}`get_threshold`.  If set to `optimize` and `u_exact` is provided, then
+            then :func:`scipy.optimize.minimize_scalar` will be used to optimize the
+            value.
         f_weight : function, None
-            Function f_weight(d) that returns the relative weight of a pixel distance d
-            away.  Default is a constant.
+            Function f_weight(d, sigma_weight) that returns the relative weight of a pixel
+            distance d away.  Default is a gaussian with width sigma_weight.
+        sigma_weight : function, None
+            Function sigma_weight(ds) that returns the sigma_weight passed to f_weight
+            given the neighborhood of distances ds.  The default is max(ds) / 2 / k_sigma.
+        k_sigma : float
+            Parameter in the default sigma_weight.  The diameter of the neighbourhood
+            ``max(ds) = 2*k_sigma * sigma_weight``.  Set to zero for constant weights
+            over the neighbourhood.
         dists, u_ :
             If provided, used to improve performance.
         debug : bool
@@ -1218,6 +1264,30 @@ class NonLocalMeans(Base):
             u_ = self.pad(u)
         if dists is None:
             dists = self.compute_dists(u_=u_)
+
+        if percentile == "optimize":
+            if u_exact is None:
+                u_exact = self.u_exact
+
+            _cache = {}
+
+            def err(percentile):
+                if percentile not in _cache:
+                    _cache[percentile] = self.dist(
+                        u_exact,
+                        self.denoise(u=u, dists=dists, u_=u_, percentile=percentile),
+                    )
+                return _cache[percentile]
+
+            res = sp.optimize.minimize_scalar(
+                err, bracket=(10, 50), bounds=(0, 100), options=dict(xatol=0.1)
+            )
+            if not res.success:
+                raise ValueError(res.message)
+
+            percentile = res.x
+            err = res.fun
+            print(f"Optimal {percentile=:.1f}: {err=:.2g}")
 
         Nx, Ny = u.shape
         Np = Nx * Ny
@@ -1243,42 +1313,49 @@ class NonLocalMeans(Base):
         # Build Graph: keys are nodes, values are lists of neighbours
         if f_weight is None:
 
-            def f_weight(d):
-                return 1
+            def sigma_weight(ds):
+                """Return the weight give the neighbourhood distance ds."""
+                return max(ds) / 2 / max(k_sigma, _EPS)
+
+            def f_weight(d, sigma):
+                """Return the weight given distance d.
+
+                Arguments
+                ---------
+                d : float
+                    Distance to the current point.
+                sigma : float
+                    Reference distance returned by sigma_weight()
+                """
+                return np.exp(-((d / sigma) ** 2) / 2)
 
         G = {}
         threshold = self.get_threshold(percentile=percentile)
-        for (d_, (i0, i1)) in ds:
-            d = d_
-            if self.subtract_mean:
-                d, dAB_ = d_
+        for ((d, dAB_), (i0, i1)) in ds:
             neighbours = G.setdefault(i0, [])
 
             if d <= threshold or len(neighbours) < Nmin:
-                neighbours.append((i1, d_))
+                neighbours.append((i1, (d, dAB_)))
             if self.symmetric:
                 neighbours = G.setdefault(i1, [])
                 if d <= threshold or len(neighbours) < Nmin:
-                    neighbours.append((i0, d_))
+                    # Remember that the transposed entries have the opposite sign of dAB_
+                    neighbours.append((i0, (d, -dAB_)))
 
         # Actually denoise the image.
         u_clean = []
         for i0 in range(Np):
             ix, iy = self.ixy(i0)
-            if self.subtract_mean:
-                P0 = self.get_patch(i0, u_=u_)
-
             us = [u[ix, iy]]
-            ws = [f_weight(0)]
-            for i1, d1 in G.get(i0, []):
-                i1x, i1y = self.ixy(i1)
-                offset = 0
-                if self.subtract_mean:
-                    d, offset = d1
-                    P1 = self.get_patch(i1, u_=u_)
-
-                us.append(u[i1x, i1y] + offset)
-                ws.append(f_weight(d1))
+            ws = [f_weight(0, sigma=1)]
+            d_dABs = G.get(i0, [])
+            if d_dABs:
+                ds = [_d for (_d, _d_) in d_dABs]
+                sigma = sigma_weight(ds)
+                for i1, (d1, dAB_) in d_dABs:
+                    i1x, i1y = self.ixy(i1)
+                    us.append(u[i1x, i1y] - dAB_)
+                    ws.append(f_weight(d1, sigma=sigma))
 
             u_clean.append(np.dot(us, ws) / sum(ws))
         u_clean = np.array(u_clean).reshape((Ny, Nx)).T
