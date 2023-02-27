@@ -44,20 +44,21 @@ its **adjacency matrix** $\mat{A}$ by first labeling the vertices by an index $i
   \end{cases}
 \end{gather*}
 :::{margin}
-Note that we associate $w_{ji}$ with edge $e=(i,j)$ with transposed indices.  I do this
-on the advice of {cite:p}`Bauer:2012` who claims it is more natural for working with
-dynamical systems.
+Note: some references, like {cite:p}`Bauer:2012`. use the transpose $w_{ji}$ for the
+weight corresponding to the edge $e=(i,j)$.  They claim this is more natural for working with
+dynamical systems.  To compare with these works, use $\mat{A}^T = \mat{W}^T$ where they
+use $\mat{A}$.
 :::
-Sometimes we want to associate a **weight** $w_{ji}$ with each edge $e=(i, j)$.  This might codify
+Sometimes we want to associate a **weight** $w_{ij}$ with each edge $e=(i, j)$.  This might codify
 a channel capacity (used in calculating the {ref}`sec:FlatNorm`), or it might be
 associated with a distance $d_{ij} = d(v_i, v_j)$ between the vertices.  In this case,
-we have a **weighted adjacency matrix** $\mat{A}$: $A_{ij} = w_{ji}$ or $\mat{A} = \mat{w}^T$.
+we have a **weighted adjacency matrix** $\mat{A}=\mat{W}$.
 
 :::{note}
 Unless the graph is almost fully connected, the adjacency matrix will be sparse,
 thus we usually use a sparse matrix representation, such as provided by
 {mod}`scipy.sparse`.  This provides one more option: one can ask if the sparse matrix
-$\mat{A}$ contains an entry $A_{ij}$, which is different that asking if $A_{ij} \neq
+$\mat{A}$ contains an entry $a_{ij}$, which is different that asking if $a_{ij} \neq
 0$.  I.e., we can retain adjacency information even if an edge has zero weight.  Masked
 arrays can also be used.  These are used by the algorithms in
 {mod}`scipy.sparse.csgraph` which will generally be our first consideration when selecting
@@ -72,8 +73,8 @@ adjacency matrix has some nice properties.
 
 Related to the adjacency matrix $\mat{A}$ are the degrees $d_i$ of each vertex:
 \begin{align*}
-  d^{\text{out}}_i &= \sum_{j}A_{ij} = \sum_{j}W_{ji}, \\
-  d^{\text{in}}_i &= \sum_{j}A_{ji} = \sum_{j}W_{ij}.
+  d^{\text{out}}_j &= \sum_{i}A_{ij}, \\
+  d^{\text{in}}_i &= \sum_{j}A_{ij}.
 \end{align*}
 For undirected graphs we have simply $d_{i} = d^{\text{in}}_i = d^{\text{out}}_i$.  From
 these we can construct the **degree matrix** $\mat{D}$:
@@ -83,7 +84,7 @@ these we can construct the **degree matrix** $\mat{D}$:
 
 According to {cite:p}`Bauer:2012`, the normalized graph Laplacian is
 \begin{gather*}
-  \mat{\bar{\Delta}} = \mat{1} - \mat{D}^{-1}\mat{W}^T = \mat{1} - \mat{D}^{-1}\mat{A}.
+  \mat{\bar{\Delta}} = \mat{1} - \mat{D}^{-1}\mat{A}.
 \end{gather*}
 with appropriate rows set to zero if $d_{i}^{\text{out}} = 0$.
 
