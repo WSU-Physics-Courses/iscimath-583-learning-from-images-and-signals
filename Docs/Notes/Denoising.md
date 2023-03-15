@@ -79,7 +79,6 @@ clear_output()
 display(fig)
 ```
 
-
 [DCT]: <https://en.wikipedia.org/wiki/Discrete_cosine_transform>
 [DST]: <https://en.wikipedia.org/wiki/Discrete_sine_transform>
 

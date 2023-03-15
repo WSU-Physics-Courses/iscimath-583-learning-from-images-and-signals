@@ -153,6 +153,15 @@ dependencies:
     - ruamel-yaml
     - genbadge[all]
     - PyMaxflow>=1.3.0
+    - nasdaq_stock
+    - deepdiff
+    - uncertainties
+    - yfinance
+    - scikit-learn
+    - seaborn
+    - patsy
+    - statsmodels
+
 channels:
   - defaults
 

@@ -12,7 +12,7 @@ kernelspec:
   name: math-583
 ---
 
-```{code-cell} ipython3
+```{code-cell}
 :tags: [hide-cell]
 
 import mmf_setup;mmf_setup.nbinit()
@@ -65,7 +65,7 @@ When we add Gaussian variables, we find:
 
 *If you don't know this, you should derive it.  Here we check it numerically.*
 
-```{code-cell} ipython3
+```{code-cell}
 %matplotlib inline
 import numpy as np, matplotlib.pyplot as plt
 import scipy.stats
@@ -208,7 +208,7 @@ additional scaling factor of $\texttt{scale=}2σ^2/N$ and set the correct number
 degrees of freedom to $\texttt{df}=N$ or $\texttt{df}=N-1$ depending on the value of
 `subtract_mean`.
 
-```{code-cell} ipython3
+```{code-cell}
 dx, dy = 2, 2
 N = dx*dy
 σ = 0.2
@@ -267,7 +267,7 @@ well.  Here we define a repeating $5\times 6$ grid with an overall trend.  The i
 that we can average over each of the $5\times 6=30$ repeating units to reduce the
 variance of the noise by factor of $30$.
 
-```{code-cell} ipython3
+```{code-cell}
 import scipy.stats
 from math_583 import denoise
 
@@ -343,7 +343,7 @@ Can you figure out how the distances are distributed in the case of `subtract_me
 or with a linear trend in the images?
 :::
 
-```{code-cell} ipython3
+```{code-cell}
 rng = np.random.default_rng(seed=2)
 im = TestImage()
 im_no_trend = TestImage(mx=0, my=0)
@@ -423,7 +423,7 @@ ax.set(xlabel="dist(u, u_exact)", ylim=(0, 200), xlim=(0.001, 0.3));
 We can now apply our implementation of the non-local means algorithm to see how well it
 performs.
 
-```{code-cell} ipython3
+```{code-cell}
 import scipy.stats
 from importlib import reload
 from math_583 import denoise; reload(denoise)
@@ -456,7 +456,7 @@ plt.suptitle(f"{err=:.2g}");
 Here is a comparison with the implementation in
 [scikit-image](https://scikit-image.org/docs/dev/api/skimage.restoration.html#denoise-nl-means):
 
-```{code-cell} ipython3
+```{code-cell}
 from scipy.optimize import minimize_scalar
 from skimage.restoration import denoise_nl_means, estimate_sigma
 kw = dict(patch_size=patch_size, patch_distance=5, fast_mode=False, sigma=sigma)
@@ -476,18 +476,18 @@ plt.suptitle(f"{err=:.2g}");
 ```
 
 <!--
-```{code-cell} ipython3
+```{code-cell}
 n = denoise.NonLocalMeans(im, mode='reflect', sigma=sigma, subtract_mean=True, symmetric=True)
 u_ = n.pad(u_noise)
 dists = n.compute_dists(u_=u_)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 u = n.denoise(u_noise, dists=dists, u_=u_, percentile=75.0)
 im.show(u, u_noise, u_exact)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 from tqdm.auto import tqdm
 ps = 100 - 10**np.linspace(-1, 1.9, 20)
 #ps = 100 - 10**np.linspace(-7, 0, 20)
@@ -496,13 +496,13 @@ errs = [n.dist(u_exact, n.denoise(u_noise, dists=dists, u_=u_, percentile=_p))
 #im.show(u, u_noise, u_exact)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 fig, ax = plt.subplots()
 ax.plot(ps, errs)
 ax.axhline(n.dist(u0, u_exact), c='y')
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 u = n.denoise(u_noise, dists=dists, u_=u_, percentile=80)
 im.show(u, u_noise, u_exact)
 ```
@@ -513,7 +513,7 @@ im.show(u, u_noise, u_exact)
 
 
 
-```{code-cell} ipython3
+```{code-cell}
 def i_(ix, iy):
     """Return the linear patch index."""
     return ix + (Nx-dx)*iy
@@ -538,7 +538,7 @@ plt.plot([ix*dx, ix*dx, ix*dx+dx, ix*dx+dx, ix*dx],
          [iy*dy, iy*dy+dy, iy*dy+dy, iy*dy, iy*dy], '-')
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 def get_patch(u, i):
     ix, iy = ixy_(i)
     return u[ix:ix+dx, iy:iy+dy]
@@ -556,11 +556,11 @@ def compute_dists(u, dx=dx, dy=dy):
     return np.ma.masked_array(dists, mask=np.eye(Np))
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 im.show(D, vmin=0, vmax=D.max())
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 D = compute_dists(u_noise)
 plt.hist(D.ravel(), 40, density=True);
 x = np.linspace(D.min(), D.max(), 200)
@@ -572,7 +572,7 @@ plt.plot(x, chi2.pdf(x))
 
 The $\chi^2_N$ distribution with $N$ degrees of freedom (`df`) is distribution of the sum of the squares of $f$ normally distributed variables.  Since this is the square, the `scale` is $\sigma^2$.  In our case, we take the mean, so we introduce an additional factor of $N$ in the scale.
 
-```{code-cell} ipython3
+```{code-cell}
 x = np.linspace(0,1,100)
 sigma = 0.5
 N = 25
@@ -584,7 +584,7 @@ x = np.linspace(0, samples.max(), 200)
 plt.plot(x, sp.stats.chi2(scale=sigma**2, df=N).pdf(x))
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 x = np.linspace(0,1,100)
 sigma = 0.1
 N = 25
@@ -596,12 +596,12 @@ x = np.linspace(0, samples.max(), 200)
 plt.plot(x, sp.stats.chi2(scale=sigma**2/N, df=N).pdf(x))
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 threshold = chi2.ppf(0.5)
 threshold = 0.01
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 from IPython.display import clear_output
 import time
 Np = D.shape[0]
@@ -656,7 +656,7 @@ An alternative might be to use a more graph-based method, and then define the ap
 
 Padding is a little tricky.  We test the indexing here.
 
-```{code-cell} ipython3
+```{code-cell}
 # Design this to work with odd dx, tweak to work with even dx.
 import numpy as np
 Nx = 6           # Size of original array
@@ -675,7 +675,7 @@ u_[-ix1:] = u_[ix0:][:ix1] # Tweak to work with
 print(u_)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 import mmf_setup;mmf_setup.set_path();
 from importlib import reload
 from math_583 import denoise;reload(denoise)
@@ -686,7 +686,7 @@ n = denoise.NonLocalMeans(im, mode='wrap')
 n.pad(u)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 A, B = np.random.random((2, 5, 5))
 %timeit np.mean(A)
 %timeit A.mean()
@@ -694,17 +694,17 @@ A, B = np.random.random((2, 5, 5))
 
 Here is how we index into an array.  Note that the y-index should increase inside.
 
-```{code-cell} ipython3
+```{code-cell}
 print(np.ravel([[1, 2, 3], 
                 [4, 5, 6]]))
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 n = denoise.NonLocalMeans(im, mode='wrap')
 n.compute_dists(u).reshape(6, 6)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 import mmf_setup;mmf_setup.set_path();
 from importlib import reload
 from math_583 import denoise;reload(denoise)
@@ -716,7 +716,7 @@ n.compute_dists(u).reshape(6, 6)
 
 ### Our Code
 
-```{code-cell} ipython3
+```{code-cell}
 %pylab inline
 import mmf_setup;mmf_setup.nbinit()
 import numpy as np, matplotlib.pyplot as plt
@@ -750,18 +750,18 @@ im.show(u0, u_noise, u_exact)
 n = denoise.NonLocalMeans(im, mode='reflect', sigma=sigma, subtract_mean=True)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 n = denoise.NonLocalMeans(im, mode='reflect', sigma=sigma, subtract_mean=True, symmetric=True)
 u_ = n.pad(u_noise)
 dists = n.compute_dists(u_=u_)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 u = n.denoise(u_noise, dists=dists, u_=u_, percentile=75.0)
 im.show(u, u_noise, u_exact)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 from tqdm.auto import tqdm
 ps = 100 - 10**np.linspace(-1, 1.9, 20)
 #ps = 100 - 10**np.linspace(-7, 0, 20)
@@ -770,18 +770,18 @@ errs = [n.dist(u_exact, n.denoise(u_noise, dists=dists, u_=u_, percentile=_p))
 #im.show(u, u_noise, u_exact)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 fig, ax = plt.subplots()
 ax.plot(ps, errs)
 ax.axhline(n.dist(u0, u_exact), c='y')
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 u = n.denoise(u_noise, dists=dists, u_=u_, percentile=80)
 im.show(u, u_noise, u_exact)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 rng = np.random.default_rng(seed=2)
 
 dx, dy = (5, 5)
@@ -816,13 +816,13 @@ def get_dist(log10p100s=(0.1,), sigma=0.1, dx=5, dy=5, subtract_mean=True, mode=
     return percentiles, errs
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 log10p100s = np.linspace(-1.5, 1.5, 20)
 ds = [3, 5, 7]
 ps_errs = [get_dist(log10p100s, dx=_d, dy=_d) for _d in ds]
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 fig, ax = plt.subplots()
 for d, (ps, errs) in zip(ds, ps_errs):
     ax.plot(ps, errs, label=f"dx=dy={d}")
@@ -830,20 +830,20 @@ ax.legend()
 ax.set(xlabel="threshold percentile", ylabel="dist(u, u_exact)")
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 Nx, Ny = u_noise.shape
 Np = Nx*Ny
 D = np.ma.masked_array(D, mask=np.eye(Np))
 im.show(D, vmin=0, vmax=D.max())
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 ds = sorted([(D[i0, i1], (i0, i1)) for i1 in range(Np) for i0 in range(i1+1,Np)])
 plt.plot([_d[0] for _d in ds])
 plt.axhline(n.get_threshold(), c='y')
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 threshold = n.get_threshold()
 neighbours = {}
 for _d, (i0, i1) in ds:
@@ -861,15 +861,15 @@ for ix in range(Nx):
         
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 im.show(u, u_noise, u_exact)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 [u_noise[n.ixy(i1)] for (i1, d) in neighbours.get(i0, [(i0, 1)])]
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 ds0 = [_d for _d in ds if _d[0] <= threshold]
 im.show(u_noise)
 for (_d, (i0, i1)) in ds0:
@@ -878,26 +878,26 @@ for (_d, (i0, i1)) in ds0:
     plt.plot([ixy0[1], ixy1[1]], [ixy0[0], ixy1[0]], '-x', lw=0.1)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 im.show(u_noise)
 plt.plot([0], [1], 'x')
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 plt.hist(D.ravel(), 40, density=True);
 plt.axvline(n.get_threshold(), c='y')
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 u_ = n.pad(u_noise)
 im.show(u_, vmin=0, vmax=u_.max())
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 def dist(A, B):
     dAB = A - B
     dAB_ = dAB.mean()
@@ -913,17 +913,17 @@ B = u_[ix1:ix1+dx, iy1:iy1+dy]
 n.dist(A, B), D[i0, i1], D_[ix0, iy0, ix1, iy1], D_[ix1, iy1, ix0, iy0]
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 ix1, iy1
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 n = denoise.NonLocalMeans(im, mode='wrap')
 u_ = n.pad(u)
 im.show(u_, vmin=0, vmax=u_.max())
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 
 ```
 

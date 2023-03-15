@@ -228,7 +228,7 @@ class Image(Base):
         return self.image.__repr__()
 
     def _repr_pretty_(self, *v, **kw):
-        if hasattr(self, "image"):
+        if hasattr(self, "image") and hasattr(self.image, "_repr_pretty_"):
             return self.image._repr_pretty_(*v, **kw)
         return None
 

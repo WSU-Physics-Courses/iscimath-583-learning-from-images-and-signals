@@ -36,8 +36,6 @@ ax.plot(x, f(x, d=1))
 ax.plot(x, f(x, d=2));
 ```
 
-
-
 ## Finite Differences
 
 A straightforward way of computing derivatives is to use finite difference formula,
@@ -165,7 +163,6 @@ assert np.allclose(
     correlate1d(f(x), weights=[1/dx**2, -2/dx**2, 1/dx**2], mode='wrap'),
     (f(x+h) + f(x-h) - 2*f(x))/h**2)
 ```
-
 
 {ref}`sec:FourierTechniques`
 

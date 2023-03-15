@@ -12,7 +12,7 @@ kernelspec:
   name: math-583
 ---
 
-```{code-cell} ipython3
+```{code-cell}
 :tags: [hide-cell]
 
 import mmf_setup;mmf_setup.nbinit()
@@ -22,7 +22,7 @@ import numpy as np, matplotlib.pyplot as plt
 from IPython.display import clear_output, display
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 import numpy as np
 from importlib import reload
 from math_583 import denoise; reload(denoise)
@@ -32,30 +32,30 @@ l1tv = denoise.L1TVMaxFlow(u_noise, laminv2=2)
 im.show(l1tv.denoise1(threshold=0.2), u_noise, im.get_data(sigma=0))
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 %time im.show(l1tv.denoise(N=10), u_noise, im.get_data(sigma=0))
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 %%time
 d = denoise.Denoise(im, p=1, q=1, lam=2/2)
 u = d.minimize(callback=None)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 %%time
 ths = np.linspace(u_noise.min(), u_noise.max(), 10)
 us = list(map(l1tv.denoise1, ths))
 im.show(*us)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 im.show(u)
 ```
 
 # L1TV
 
-```{code-cell} ipython3
+```{code-cell}
 import numpy as np
 import maxflow
 from math_583 import denoise
@@ -150,7 +150,7 @@ Thus, one may need to scale and round the entries.
 SciPy does not currently provide a routine for producing the min cut $c(S,T)$
 :::
 
-```{code-cell} ipython3
+```{code-cell}
 from importlib import reload
 from math_583 import flow; reload(flow)
 import scipy.sparse
@@ -174,7 +174,7 @@ f1.plot(pos=pos, cut=cut)
 
 ## $L^1$-TV
 
-```{code-cell} ipython3
+```{code-cell}
 from importlib import reload
 from math_583 import flow, denoise; reload(flow); reload(denoise)
 import scipy.sparse
@@ -185,7 +185,7 @@ u_noise = im.get_data()
 l1tv = denoise.L1TV(u_noise)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 import igraph
 self = l1tv
 lam = 2/100
@@ -199,7 +199,7 @@ f = flow.Flow(C, s=s, t=t)
 #%time cut = f.min_cut()
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 %load_ext line_profiler
 display(im.show(u_noise))
 l1tv.laminv2 = 2
@@ -207,7 +207,7 @@ l1tv.laminv2 = 2
 display(im.show(u))
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 %load_ext line_profiler
 from importlib import reload
 from math_583 import flow, denoise; reload(flow); reload(denoise)
@@ -220,7 +220,7 @@ laminv2 = 4
 %lprun -f denoise.compute_l1tv u = denoise.compute_l1tv(u_noise, laminv2=laminv2)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 %load_ext line_profiler
 from importlib import reload
 from math_583 import flow, denoise; reload(flow); reload(denoise)
@@ -235,7 +235,7 @@ u1 = denoise.compute_l1tv(u_noise, laminv2=2)
 im.show(u.astype(int) - u1)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 %load_ext line_profiler
 from importlib import reload
 from math_583 import flow, denoise; reload(flow); reload(denoise)
@@ -250,11 +250,11 @@ laminv2 = 4
 im.show(u)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 import copy
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 import maxflow
 threshold = 0.5
 laminv2 = 4
@@ -276,7 +276,7 @@ sgm = g.get_grid_segments(nodeids)
 im.show(sgm)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 from importlib import reload
 from math_583 import flow, denoise; reload(flow); reload(denoise)
 import scipy.sparse
@@ -293,15 +293,15 @@ class F(denoise.Base):
         C = sp.sparse.csr_array()
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 np.square([1, 3]).sum()
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 (lambda *x: sum(x))(1, 2, 3)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 %%time 
 from itertools import product
 Nx, Ny = im.shape
@@ -342,12 +342,12 @@ for nx, ny in product(range(Nx), range(Ny)):
             C[key] = C[keyT] = w[wkey]
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 key = [1, 2]
 key[::-1]
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 # Make a black and white image
 u = im.get_data()
 u0 = np.percentile(u, 50)
@@ -383,7 +383,7 @@ f = get_flow(u, laminv2=5)
 cut = f.min_cut()
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 S, T = cut.S, cut.T
 S.remove(f.s)
 T.remove(f.t)
@@ -393,25 +393,25 @@ u = u.reshape(Nx, Ny)
 im.show(u)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 S = cut.S
 S.remove(s)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 %time rows, cols, vals = map(list, np.transpose([(_key(*_k[:2]), _key(*_k[2:]), C[_k]) for _k in C]))
 %time rows = [_key(*_k[:2] for _k in C]
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 %debug
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 C = np.array([[0, 16, 13,  0,  0,  0],
               [0,  0, 10, 12,  0,  0],
               [0,  4,  0,  0, 14,  0],
@@ -422,11 +422,11 @@ f = flow.Flow(C, s=0, t=5)
 f.min_cut_igraph()
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 f._res.cut
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 np.random.seed(3)
 
 C = np.random.randint(256, size=(1000, 1000))
@@ -450,7 +450,7 @@ print(fv_)
 print(abs(fv_/fv - 1))
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 C = np.array([[0, 16, 13,  0,  0,  0],
               [0,  0, 10, 12,  0,  0],
               [0,  4,  0,  0, 14,  0],
@@ -463,7 +463,7 @@ g = ig.Graph.Weighted_Adjacency(f.C, mode="directed", attr="capacity")
 ig.plot(g, layout=g.layout_circle())
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 Nx = f.C.shape[0]-2
 g = ig.Graph.Weighted_Adjacency(f.C, mode="directed", attr="capacity")
 visual_style = dict(
@@ -486,7 +486,7 @@ g.vs[np.where(u0==1)[0]]["color"] = g.vs[s]['color'] = 255
 display(ig.plot(g, **visual_style))
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 N = f.C.shape[0] - 2
 f.pos = np.arange(N).tolist() + [N/2, N/2], np.zeros(N).tolist() + [N/2, -N/2]
 ig, g, vs = f.plot()
@@ -494,7 +494,7 @@ ig.plot(g)
 #display(p)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 import igraph as ig
 import numpy as np
 from scipy.sparse import dok_matrix
@@ -520,7 +520,7 @@ g = ig.Graph.Weighted_Adjacency(C, mode="directed", attr="capacity")
 ig.plot(g)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 from matplotlib import cm
 import igraph as ig
 import numpy as np
@@ -573,12 +573,12 @@ g.vs[flow.partition[1]]["color"] = 0
 ig.plot(g, **visual_style)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 print(f.max_flow_igraph().flow_value)
 print(fn.max_flow_igraph().flow_value*n)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 from math_583 import flow
 import scipy.sparse
 sp = scipy
@@ -595,7 +595,7 @@ for N in [10, 100, 1000]:
         assert flow.allclose(res_sp.flow.C, res_ig.flow.C)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 from math_583 import denoise
 
 N = 256 // 2
@@ -694,12 +694,12 @@ m = MinCutMaxFlow(u, mode="reflect")
 print(m.pad(A))
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 a = np.arange(5)
 a[3:0:-1]
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 d = denoise.Denoise(im, **args)
 u = d.minimize(plot=False, tol=1e-5)
 clear_output()

@@ -12,7 +12,7 @@ kernelspec:
   name: math-583
 ---
 
-```{code-cell} ipython3
+```{code-cell}
 :tags: [hide-cell]
 
 import mmf_setup;mmf_setup.nbinit()
@@ -34,13 +34,13 @@ characteristic function $u \in \{0, 1\}$:
 
 The algorithm (see {cite:p}`Vixie:2010` for details).
 
-```{code-cell} ipython3
+```{code-cell}
 C = np.random.random((5,5))
 import scipy.sparse.csgraph
 import scipy as sp
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 from math_583 import denoise
 
 u0 = []
@@ -62,7 +62,7 @@ ax.plot(u, label=f"2/λ={2/d.lam:.4}")
 ax.legend();
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 from scipy.sparse import dok_matrix
 from scipy.sparse.csgraph import maximum_flow
 
@@ -90,7 +90,7 @@ flow = getattr(res, 'flow', res.residual)
 #print(flow)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 import networkx as nx
 from packaging import version
 assert version.parse("3.0.0") <= version.parse(nx.__version__)
@@ -127,7 +127,7 @@ nx.draw(G, pos=pos)
 [ringing artifacts]: <https://en.wikipedia.org/wiki/Ringing_artifacts>
 [broadcasting]: <https://numpy.org/doc/stable/user/basics.broadcasting.html>
 
-```{code-cell} ipython3
+```{code-cell}
 import numpy as np
 import graph_tool.all
 import graph_tool as gt
@@ -181,7 +181,7 @@ gt.all.graph_draw(g, pos=pos,
                   edge_font_size=12)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 g.new_vertex_property("string")
 ```
 
@@ -189,7 +189,7 @@ g.new_vertex_property("string")
 
 [igraph]: https://igraph.org/
 
-```{code-cell} ipython3
+```{code-cell}
 try: 
     import igraph as ig
 except ImportError:
@@ -197,7 +197,7 @@ except ImportError:
     !{sys.executable} -m pip install --user python-igraph
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 from matplotlib import cm
 import igraph as ig
 import numpy as np
@@ -250,22 +250,22 @@ g.vs[flow.partition[1]]["color"] = 0
 ig.plot(g, **visual_style)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 res.flow
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 import sys
 import scipy.sparse
 sp = scipy
 np.shape([[1,2,3]])
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 m = g.get_adjacency(attribute="capacity")
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 from importlib import reload
 from math_583 import flow
 reload(flow)
@@ -288,7 +288,7 @@ print(f.max_flow_networkx(method='boykov_kolmogorov').flow.C.toarray())
 print(f.max_flow_networkx(method='shortest_augmenting_path').flow.C.toarray())
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 #C = [[0, 2], 
 #     [1, 0]]
 f = flow.Flow(C, s=0, t=5)
@@ -297,11 +297,11 @@ for res in [f.max_flow_scipy(), f.max_flow_igraph()]:
     print(res.flow.C.toarray())
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 f._res.flow
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 import scipy.sparse.csgraph
 sp = scipy
 graph = sp.sparse.csr_matrix([[0, 5, 0], [0, 0, 3], [0, 0, 0]])
@@ -310,11 +310,11 @@ print(res.flow_value)
 print(res.flow.toarray())
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 res.flow.maximum(0).toarray()
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 import networkx as nx
 C = np.array([[0, 16, 13,  0,  0,  0],
               [0,  0, 10, 12,  0,  0],
@@ -331,17 +331,17 @@ nx.adjacency_matrix(res, weight='flow').maximum(0).toarray()
 res.graph['flow_value']
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 flow = res[1]
 #for e in flow:
 f = nx.DiGraph()
 f.add_weighted_edges_from(flow)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 
 ```

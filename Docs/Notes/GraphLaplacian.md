@@ -12,7 +12,7 @@ kernelspec:
   name: math-583
 ---
 
-```{code-cell} ipython3
+```{code-cell}
 :tags: [hide-cell]
 
 import mmf_setup;mmf_setup.nbinit()
@@ -134,12 +134,9 @@ The Laplacian has some nice features:
 
 
 
-Now consider tabulating $f_n = f(x_n)$ at a set of points $x_n$.  How can 
+Now consider tabulating $f_n = f(x_n)$ at a set of points $x_n$.  How can
 
-
-
-
-```{code-cell} ipython3
+```{code-cell}
 %matplotlib inline
 import numpy as np, matplotlib.pyplot as plt
 import scipy.stats
@@ -151,7 +148,7 @@ def in_region(x, y, x0=-5.0, x1=5.0, r0=4, r1=3, d=1):
     return ((abs(y)<d/2) & (x0<x) & (x<x1) | (abs(z-x0)<r0) | (abs(z-x1)<r1))
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 xlim = (-10, 10)
 ylim = (-5, 5)
 x_ = np.linspace(*xlim, 256)
@@ -160,7 +157,7 @@ X, Y = np.meshgrid(x_, y_, indexing='ij', sparse=True)
 plt.imshow(in_region(X, Y).T)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 rng = np.random.default_rng(seed=2)
 Ng = 400  # Size of graph
 xy = []
@@ -172,7 +169,7 @@ while len(xy) < Ng:
 xy = np.asarray(xy)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 fig, ax = plt.subplots()
 ax.pcolormesh(x_, y_, in_region(X, Y).T, shading='auto')
 ax.plot(*zip(*xy), '+')
@@ -181,7 +178,7 @@ ax.set(aspect=1)
 
 We will use [`scipy.spatial.KDTree`](https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.KDTree.html) to find the nearest neighbours and then build the adjacency graph.
 
-```{code-cell} ipython3
+```{code-cell}
 import scipy.spatial, scipy.sparse.csgraph
 sp = scipy
 
@@ -199,7 +196,7 @@ for n0 in range(N):
         G[n0, n1] = 1
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 fig, ax = plt.subplots()
 ax.pcolormesh(x_, y_, in_region(X, Y).T, shading='auto')
 ax.set(aspect=1)
@@ -209,7 +206,7 @@ for i0, i1 in zip(*G.nonzero()):
     ax.plot(*xy[[i0,i1]].T, '-+')
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 # Simple version of the Laplacian as the symmetrized adjacency matrix
 L2 = ((G.T + G)/2).toarray() > 0
 L2 = L2 - np.diag(L2.sum(axis=0))
@@ -220,7 +217,7 @@ d, V = d[inds], V[:, inds]
 plt.plot(V[:, 0])
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 x, y = xy.T
 F = np.exp(-(X**2+Y**2)/5**2/2)
 f = np.exp(-(x**2+y**2)/5**2/2)
@@ -232,13 +229,13 @@ ax.plot(*zip(*xy), '+')
 ax.set(aspect=1)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 N = 10
 print(len(f))
 abs(V[:, :N] @ (V.T @ f)[:N] - f).max()
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 x, y = xy.T
 F = np.exp(-(X**2+Y**2)/5**2/2)
 f = np.exp(-(x**2+y**2)/5**2/2)
@@ -250,11 +247,11 @@ ax.plot(*zip(*xy), '+')
 ax.set(aspect=1)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 print(len(f))
 abs(V[:, inds][:, :N] @ (V[:, inds].T @ f)[:N] - f).max()
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 
 ```

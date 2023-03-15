@@ -23,7 +23,6 @@ try:
     from myst_nb import glue
 except ImportError: 
     glue = None
-
 ```
 
 (sec:FourierTechniques)=
@@ -266,6 +265,7 @@ divergence, we obtain another factor of $\I k$, and the final function $E'[u]$ i
 To provide a nicer experience for users, however, we do take the real component in 
 {func}`math_583.denoise.Denoise.gradient` when called externally.
 ::::
+
 ```{code-cell}
 :tags: [hide-cell]
 
