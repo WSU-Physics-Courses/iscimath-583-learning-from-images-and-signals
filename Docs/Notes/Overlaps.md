@@ -335,11 +335,107 @@ ax.legend()
 ax.set(xlabel='$k$', ylabel='overlap $E(k)$');
 ```
 
+## Computational Issues
 
+Generally, the fastest way to do these types of things is to express the matching
+problem in terms of linear algebra: i.e. form a template matrix $\mat{T}$ and simply
+compute the overlaps as $\abs{\mat{T}\ket{u}}$.  This allows you to take advantage of
+highly-optimized linear algebra codes ([BLAS][], [LAPACK][], etc.)  Unfortunately, if
+you desire fine resolution -- $N_p$ points -- in your parameter ($x_0$ or $k$ here) and
+have large data -- $N$ points -- then the matrix $\mat{T}^{(N_p×N)}$ might not fit into
+memory.  In this case, one can use slower loops.  Here we demonstrate with our complex
+method from above:
+
+:::{margin}
+Even though the computation of $\mat{T}$ in the code is vectorized, it is still somewhat
+slow since first a temporary matrix needs to be formed with $xk$, then it needs to be
+exponentiated.  My tool of choice in this case is [NumExpr][] which is rather
+remarkable: it is comparable with [NumPy][], even when restricted to a single thread -
+despite having to compile the expression.  It works even better if you allow
+multiple threads.  [Numba][] would be another, more difficult, option.
+:::
+```{code-cell}
+N = 2000
+Np = 6000
+L = 10.0
+kmax = 16.0
+xs = np.linspace(0, L, N)
+ks = np.linspace(0, kmax, Np)
+
+rng = np.random.default_rng(seed=2)
+
+f_0 = 0.2
+a = 0.3
+phi = 1.5
+k = 5.4
+sigma = 1
+
+# Get the data
+u0 = f_0 + a*np.cos(k*xs + phi)
+u = u0 + rng.normal(scale=sigma, size=xs.shape)
+u_ = u - u.mean()
+
+%time T = np.exp(-1j*xs[np.newaxis, :]*ks[:, np.newaxis])
+%time overlaps1 = abs(T @ u_)
+%time overlaps2 = [abs(np.exp(-1j*k*xs) @ u_) for k in ks]
+assert np.allclose(overlaps1, overlaps2)
+```
+Clearly, if you need to compute multiple overlaps, pre-computing $\mat{T}$ is the way to
+go unless you have memory issues.  If $\mat{T}$ is too large to fit into memory, you
+might be able to still gain some performance by chunking the calculation:
+I.e. pre-compute a portion of $\mat{T}$ -- say for $k \in [k_0, k_1)$, apply it to get
+the overlaps for this region, then repeat with $k \in [k_1, k_2)$ etc.  I believe that
+the [Dask][] library and/or the [Awkward Array][] (which uses [Dask][]) may help here,
+but have not yet worked out the details.
+
+[Dask]: <https://www.dask.org/>
+[Awkward Array]: <https://github.com/scikit-hep/awkward>
+
+
+```{code-cell}
+import os
+os.environ['NUMEXPR_MAX_THREADS'] = '1'
+import numexpr
+
+print("numpy")
+%time T = np.exp(-1j*xs[np.newaxis, :]*ks[:, np.newaxis])
+%timeit np.exp(-1j*xs[np.newaxis, :]*ks[:, np.newaxis])
+
+local_dict = dict(x=xs[np.newaxis, :], k=ks[:, np.newaxis])
+print("\nnumexpr1")
+%time T1 = numexpr.evaluate('exp(-1j*x*k)', local_dict=local_dict)
+%timeit numexpr.evaluate('exp(-1j*x*k)', local_dict=local_dict)
+
+# Can we gain anything by pre-compiling?  Not much!
+expr = numexpr.NumExpr('exp(-1j*x*k)', signature=[('x', np.float64), ('k', np.float64)])
+print("\nnumexpr2")
+%time T2 = expr(xs[np.newaxis, :], ks[:, np.newaxis])
+%timeit expr(xs[np.newaxis, :], ks[:, np.newaxis])
+
+assert np.allclose(T1, T)
+assert np.allclose(T2, T)
+
+print("\noverlap1")
+%time overlaps1 = abs(T @ u_)
+%timeit abs(T @ u_)
+
+print("\noverlap2")
+%time overlaps2 = [abs(np.exp(-1j*k*xs) @ u_) for k in ks]
+%timeit [abs(np.exp(-1j*k*xs) @ u_) for k in ks]
+
+assert np.allclose(overlaps1, overlaps2)
+```
+
+
+
+[BLAS]: <https://netlib.org/blas/>
+[LAPACK]: <https://netlib.org/lapack/> 
 [QR decomposition]: <https://en.wikipedia.org/wiki/QR_decomposition>
 [Gram-Schmidt]: <https://en.wikipedia.org/wiki/Gram%E2%80%93Schmidt_process>
 [pseudoinverse]: <https://en.wikipedia.org/wiki/Generalized_inverse>
-
+[NumExpr]: <https://numexpr.readthedocs.io/en/latest/user_guide.html>
+[NumPy]: <https://numpy.org/doc/stable/>
+[Numba]: <https://numba.pydata.org/>
 
 ## Optimal Template?
 

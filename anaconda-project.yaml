@@ -111,7 +111,8 @@ dependencies:
 
   # Peformance/optimization
   - line_profiler
-  
+  - numexpr
+
   # Testing
   - pytest-cov
   - pytest-flake8
