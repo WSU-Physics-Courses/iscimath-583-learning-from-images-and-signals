@@ -6,6 +6,7 @@ Resources, Readings, and References
 
 The course will make regular reference to {cite:p}`Gezerlis:2020`.
 
+
 (sec:references)=
 References
 ==========

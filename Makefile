@@ -85,6 +85,7 @@ sync:
 
 clean:
 	-find . -name "__pycache__" -exec $(RM) -r {} +
+	-find . -name ".ipynb_checkpoints" -exec $(RM) -r {} +
 	-$(RM) -r _htmlcov .coverage .pytest_cache
 	-$(ACTIVATE) root && conda clean --all -y
 
