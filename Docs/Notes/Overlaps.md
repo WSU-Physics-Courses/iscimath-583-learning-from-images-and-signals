@@ -242,6 +242,7 @@ assert T.shape == (2, N)
 ```
 
 We use it like this, with an overlap value of $\sqrt{a^2 + b^2}$:
+
 ```{code-cell}
 phi = 1.2
 u = np.cos(k*x + phi)
@@ -293,6 +294,7 @@ ax.axvline([k], c='y', ls='--')
 ax.legend()
 ax.set(xlabel='$k$', ylabel='overlap $E(k)$');
 ```
+
 Notice that subtracting the mean here does not help as much as before, especially for
 small $k$.  This is because in our current formulation, the inversion of $\mat{r}$
 becomes singular when $k=0$ due to the fact that $\sin(0x) = 0$.
@@ -354,6 +356,7 @@ remarkable: it is comparable with [NumPy][], even when restricted to a single th
 despite having to compile the expression.  It works even better if you allow
 multiple threads.  [Numba][] would be another, more difficult, option.
 :::
+
 ```{code-cell}
 N = 2000
 Np = 6000
@@ -380,6 +383,7 @@ u_ = u - u.mean()
 %time overlaps2 = [abs(np.exp(-1j*k*xs) @ u_) for k in ks]
 assert np.allclose(overlaps1, overlaps2)
 ```
+
 Clearly, if you need to compute multiple overlaps, pre-computing $\mat{T}$ is the way to
 go unless you have memory issues.  If $\mat{T}$ is too large to fit into memory, you
 might be able to still gain some performance by chunking the calculation:
@@ -390,7 +394,6 @@ but have not yet worked out the details.
 
 [Dask]: <https://www.dask.org/>
 [Awkward Array]: <https://github.com/scikit-hep/awkward>
-
 
 ```{code-cell}
 import os
@@ -426,8 +429,6 @@ print("\noverlap2")
 assert np.allclose(overlaps1, overlaps2)
 ```
 
-
-
 [BLAS]: <https://netlib.org/blas/>
 [LAPACK]: <https://netlib.org/lapack/> 
 [QR decomposition]: <https://en.wikipedia.org/wiki/QR_decomposition>
@@ -444,9 +445,3 @@ One might consider, what is the "optimal" template?
 \begin{gather*}
   \braket{T(p)|f(x_0, a, f_0) + η}
 \end{gather*}
-
-
-
-
-
-
