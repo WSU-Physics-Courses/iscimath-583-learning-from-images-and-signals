@@ -306,6 +306,7 @@ noisy_image = d.u_noise
 def norm(u):
     return np.sqrt((u**2).sum())
 ```
+
 ```{code-cell}
 u = imported_original_image #mxn matrix
 # eta = generated_gaussian_noise #mxn matrix
@@ -341,7 +342,7 @@ For a fixed $k$-dimensional surface $M$ we may view this integral above as a lin
 
 The flat norm works by decomposing a current into two pieces, and then each piece is measured differently. The flat norm then finds the minimum over all such decompositions.
 
-Recall that if $S$ is a $k+1$ dimensional object, then its boundary is $k$ dimensional. i.e the boundary of a 2-d disk is a 1-d circle, the boundary of a 3-d ball is a 2-d sphere. If $T$ is a $k$-dimesional current and $S$ is a $k+1$ dimensional current, then we can write:
+Recall that if $S$ is a sufficiently smooth (its boundary is not a fractal) $k+1$ dimensional object, then its boundary is $k$ dimensional. i.e the boundary of a 2-d disk is a 1-d circle, the boundary of a 3-d ball is a 2-d sphere. If $T$ is a $k$-dimesional current and $S$ is a $k+1$ dimensional current, then we can write:
 
 $$T = (T-\partial S) + \partial S$$
 
@@ -460,7 +461,7 @@ One way to calculate this functional is by drawing a source and a sink node and 
 
 We then add weights $\lambda$ to those connections and a value of $1$ to each horizontal connection between the points.
 
-Nowe we create a cut between the source and the sink which defines a candidate $\Sigma$. Whenever we go up or down we are charged 1 for the jump as it adds 1 to the perimeter (total variation), and we are charged $\lambda$ where we disagree with the original $\Omega$ (exactly like $\lambda|\Sigma \Delta \Omega|$). For the illustration below, we are including in $\Sigma$ all the points above the pink cut and disregarding points below the pink cut.
+Now we create a cut between the source and the sink which defines a candidate $\Sigma$. Whenever we go up or down we are charged 1 for the jump as it adds 1 to the perimeter (total variation), and we are charged $\lambda$ where we disagree with the original $\Omega$ (exactly like $\lambda|\Sigma \Delta \Omega|$). For the illustration below, we are including in $\Sigma$ all the points above the pink cut and disregarding points below the pink cut.
 
 ![](figures/mincut_3.png)
 
@@ -485,7 +486,6 @@ Normally there would be 16 directions to consider, but due to symmetry we only n
 I.e. imagine a plane with slope one in any possible direction and making it so the integrated errors over all possible directions is minimized - this yields better weights than the Crofton method. Essentially the algorithm approximates the norm $|\nabla u|$ in the total variation term with a polygonal approximation
 
 ![](figures/mincut_5_norm.png)
-
 
 ### Graph Laplacian and Geometric Diffusion
 
@@ -609,3 +609,4 @@ Denote now $\phi_i(k)$ to be the $k$th element of the $i$th eigenvector. We now 
 This allows us to then map the $k$th node of a graph to a point in $n$ dimensions. Note that quite interestingly, the representation we obtain of the graph generally remains topologically faithful even if we drop all but the first 3 coordinates. This means then that we can then embed each node into the familiar 3 dimensional space and work with it there.
 
 Now that we've embedded our graph in $\mathbb{R}^n$ we can easily define the distance between points in the usual way. The so-called diffusion distance between nodes $k$ and $j$ of the graph is given by $D_m^{\hat{A}}(k,j) := \|\Phi_m(k)-\Phi_m(j) \|$. 
+
