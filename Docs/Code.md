@@ -35,6 +35,20 @@ The module provides the following classes:
     :members:
 ```
 
+## {mod}`math_583.fitting`
+
+```{eval-rst}
+.. automodule:: math_583.fitting
+    :members:
+```
+
+## {mod}`math_583.histogram`
+
+```{eval-rst}
+.. automodule:: math_583.histogram
+    :members:
+```
+
 ## {mod}`math_583.denoise`
 
 ```{py:module} math_583.denoise
