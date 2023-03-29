@@ -101,7 +101,10 @@ class Image(Base):
         import mmf_setup
 
         mmf_setup.set_path()
-        dir = Path(mmf_setup.ROOT) / ".." / "_data" / "images"
+        if hasattr(mmf_setup, "ROOT") and mmf_setup.ROOT:
+            dir = Path(mmf_setup.ROOT) / ".." / "_data" / "images"
+        else:
+            dir = Path(".") / "images"
 
     filename = "The-original-cameraman-image.png"
     data = None
@@ -176,7 +179,7 @@ class Image(Base):
         """
         if u_exact is None:
             u_exact = self.get_data()
-        return ((u - u_exact)**2).mean()
+        return ((u - u_exact) ** 2).mean()
 
     @property
     def rgb(self):
@@ -311,9 +314,9 @@ class Image(Base):
                     aspect = 1
                 fig, axs = subplots(len(us), height=height, aspect=aspect)
             else:
-                gs = GridSpecFromSubplotSpec(1,
-                                             len(us),
-                                             subplot_spec=ax.get_subplotspec())
+                gs = GridSpecFromSubplotSpec(
+                    1, len(us), subplot_spec=ax.get_subplotspec()
+                )
                 ax.set_subplotspec(gs[0])
                 fig = ax.figure
                 axs = [ax] + list(map(fig.add_subplot, list(gs)[1:]))
@@ -389,9 +392,9 @@ class Denoise(Base):
     def init(self):
         self.rng = np.random.default_rng(seed=self.seed)
         self.u_exact = self.image.get_data(sigma=0, normalize=True)
-        self.u_noise = self.image.get_data(sigma=self.sigma,
-                                           normalize=True,
-                                           rng=self.rng)
+        self.u_noise = self.image.get_data(
+            sigma=self.sigma, normalize=True, rng=self.rng
+        )
 
         # Dictionary of 1d derivative operators
         self._D1_dict = {}
@@ -417,9 +420,7 @@ class Denoise(Base):
         }
 
         # Pre-compute some energies for normalization.
-        self._E_noise = self.get_energy(self.u_noise,
-                                        parts=True,
-                                        normalize=False)
+        self._E_noise = self.get_energy(self.u_noise, parts=True, normalize=False)
         self._E_exact = self.get_energy(self.u_exact, parts=True)
 
     def _fft(self, u, axes=None, axis=None):
@@ -481,16 +482,20 @@ class Denoise(Base):
                 centered=[-0.5, 0, 0.5],
             )
             D1 = sp.sparse.lil_matrix(
-                np.transpose([
-                    sp.ndimage.correlate1d(
-                        _I,
-                        weights[kind],
-                        axis=-1,
-                        output=None,
-                        mode=mode,
-                        cval=cval,
-                    ) for _I in np.eye(N)
-                ])).tocsr()
+                np.transpose(
+                    [
+                        sp.ndimage.correlate1d(
+                            _I,
+                            weights[kind],
+                            axis=-1,
+                            output=None,
+                            mode=mode,
+                            cval=cval,
+                        )
+                        for _I in np.eye(N)
+                    ]
+                )
+            ).tocsr()
             self._D1_dict[key] = (D1, (-D1.T).tocsr())
         D1, _D1T = self._D1_dict[key]
         if transpose:
@@ -525,8 +530,7 @@ class Denoise(Base):
             return res
 
         u = np.asarray(u)
-        du = np.array(
-            [self.derivative1d(u, axis=_i) for _i in range(len(u.shape))])
+        du = np.array([self.derivative1d(u, axis=_i) for _i in range(len(u.shape))])
         return du
 
     def divergence(self, v, transpose=True):
@@ -535,15 +539,15 @@ class Denoise(Base):
 
         if self.mode == "periodic":
             vt = self._fft(v, axes=range(1, len(v.shape)))
-            res = self._ifft(
-                sum(1j * _k * _vt for _k, _vt in zip(self._kxyz, vt)))
+            res = self._ifft(sum(1j * _k * _vt for _k, _vt in zip(self._kxyz, vt)))
             if self.real:  # Can't check v here because it might be complex
                 res = res.real
             return res
 
         return sum(
             self.derivative1d(v[_i], axis=_i, transpose=transpose)
-            for _i in range(len(v.shape[1:])))
+            for _i in range(len(v.shape[1:]))
+        )
 
     def gradient_magnitude(self, u):
         """Return the absolute magnitude of the gradient of u."""
@@ -551,11 +555,12 @@ class Denoise(Base):
             return np.sqrt(self.gradient_magnitude2(u))
 
         return sp.ndimage.generic_gradient_magnitude(
-            u, derivative=self.derivative1d, mode=self.mode)
+            u, derivative=self.derivative1d, mode=self.mode
+        )
 
     def gradient_magnitude2(self, u):
         """Return the square of the magnitude of the gradient of u."""
-        return (abs(self.gradient(u, real=False))**2).sum(axis=0)
+        return (abs(self.gradient(u, real=False)) ** 2).sum(axis=0)
 
     def get_energy(self, u, parts=False, normalize=False):
         """Return the energy.
@@ -573,13 +578,13 @@ class Denoise(Base):
             E_regularization = (-u * self.laplacian(u) + self.eps_p).sum() / 2
         else:
             E_regularization = (
-                (self.gradient_magnitude2(u) + self.eps_p)**(p / 2)).sum() / p
+                (self.gradient_magnitude2(u) + self.eps_p) ** (p / 2)
+            ).sum() / p
 
         if q == 2.0 and self.use_shortcuts:
-            E_data_fidelity = ((u - u_noise)**2).sum() / 2
+            E_data_fidelity = ((u - u_noise) ** 2).sum() / 2
         else:
-            E_data_fidelity = ((
-                (u - u_noise)**2 + self.eps_q)**(q / 2)).sum() / q
+            E_data_fidelity = (((u - u_noise) ** 2 + self.eps_q) ** (q / 2)).sum() / q
 
         E = E_regularization + self.lam * E_data_fidelity
         E0 = self.lam * np.prod(u_noise.shape)
@@ -601,13 +606,15 @@ class Denoise(Base):
         else:
             du = self.gradient(u, real=False)
             dE_regularization = -self.divergence(
-                du * (self.gradient_magnitude2(u) + self.eps_p)**((p - 2) / 2))
+                du * (self.gradient_magnitude2(u) + self.eps_p) ** ((p - 2) / 2)
+            )
 
         if q == 2.0 and self.use_shortcuts:
             dE_data_fidelity = u - u_noise
         else:
-            dE_data_fidelity = (u - u_noise) * (
-                (u - u_noise)**2 + self.eps_q)**((q - 2) / 2)
+            dE_data_fidelity = (u - u_noise) * ((u - u_noise) ** 2 + self.eps_q) ** (
+                (q - 2) / 2
+            )
 
         dE = dE_regularization + self.lam * dE_data_fidelity
 
@@ -655,13 +662,9 @@ class Denoise(Base):
         else:
             print(msg)
 
-    def minimize(self,
-                 u0=None,
-                 method="L-BFGS-B",
-                 callback=True,
-                 tol=1e-8,
-                 plot=False,
-                 **kw):
+    def minimize(
+        self, u0=None, method="L-BFGS-B", callback=True, tol=1e-8, plot=False, **kw
+    ):
         """Directly solve the minimization problem with the L-BFGS-B method."""
         if u0 is None:
             u0 = self.u_noise
@@ -697,8 +700,7 @@ class Denoise(Base):
         mode = self.mode
         if mode not in self._K2:
             raise NotImplementedError(f"{mode=} not in {set(self._K2)}")
-        res = self._ifft(
-            self._fft(self.u_noise) / (self._K2[mode] / self.lam + 1))
+        res = self._ifft(self._fft(self.u_noise) / (self._K2[mode] / self.lam + 1))
         if np.isrealobj(self.u_noise):
             assert np.allclose(res.imag, 0)
             res = res.real
@@ -726,13 +728,15 @@ class L1TVMaxFlow(Base):
         g = maxflow.Graph[float]()
         self._nodeids = g.add_grid_nodes(u_noise.shape)
         a, b, c = 0.1221, 0.0476, 0.0454
-        structure = np.array([
-            [0, c, 0, c, 0],
-            [c, b, a, b, c],
-            [0, a, 0, a, 0],
-            [c, b, a, b, c],
-            [0, c, 0, c, 0],
-        ])
+        structure = np.array(
+            [
+                [0, c, 0, c, 0],
+                [c, b, a, b, c],
+                [0, a, 0, a, 0],
+                [c, b, a, b, c],
+                [0, c, 0, c, 0],
+            ]
+        )
         args = dict(symmetric=False, weights=2, structure=structure)
         if self.mode in {"constant"}:
             args.update(periodic=False)
@@ -804,9 +808,7 @@ class L1TVMaxFlow(Base):
         else:
             thresholds = np.sort(thresholds)
         weights = [thresholds.min()] + (np.diff(thresholds)).tolist()
-        us = [
-            self.denoise1(threshold=_th, laminv2=laminv2) for _th in thresholds
-        ]
+        us = [self.denoise1(threshold=_th, laminv2=laminv2) for _th in thresholds]
         return sum(_u * _w for _u, _w in zip(us, weights))
 
 
@@ -817,13 +819,15 @@ def compute_l1tv(u_noise, laminv2, threshold=0.5, mode="constant"):
     g = maxflow.Graph[float]()
     nodeids = g.add_grid_nodes(u_noise.shape)
     a, b, c = 0.1221, 0.0476, 0.0454
-    structure = np.array([
-        [0, c, 0, c, 0],
-        [c, b, a, b, c],
-        [0, a, 0, a, 0],
-        [c, b, a, b, c],
-        [0, c, 0, c, 0],
-    ])
+    structure = np.array(
+        [
+            [0, c, 0, c, 0],
+            [c, b, a, b, c],
+            [0, a, 0, a, 0],
+            [c, b, a, b, c],
+            [0, c, 0, c, 0],
+        ]
+    )
     args = dict(symmetric=False, weights=1, structure=structure)
     if mode in {"constant"}:
         args.update(periodic=False)
@@ -863,9 +867,7 @@ class L1TV(Base):
     mode = "reflect"
 
     _weight = {
-        1: {
-            _wkey(1): 1
-        },
+        1: {_wkey(1): 1},
         2: {
             _wkey(0, 1): 0.1221,
             _wkey(1, 1): 0.0476,
@@ -888,10 +890,10 @@ class L1TV(Base):
             self._weights = self.compute_weights2()
         else:
             raise NotImplementedError(
-                f"Only 1D and 2D images supported. Got {u_noise.shape=}")
+                f"Only 1D and 2D images supported. Got {u_noise.shape=}"
+            )
 
-        self._connections = self.compute_connections(self.u_noise,
-                                                     self.threshold)
+        self._connections = self.compute_connections(self.u_noise, self.threshold)
 
     def compute_weights1(self):
         """Return the 1D weighted adjacency graph without the source and target.
@@ -930,7 +932,7 @@ class L1TV(Base):
         cols = [_k[1] for _k in weights]
         vals = list(weights.values())
 
-        return sp.sparse.csr_matrix((vals, (rows, cols)), shape=(N + 2, ) * 2)
+        return sp.sparse.csr_matrix((vals, (rows, cols)), shape=(N + 2,) * 2)
 
     def compute_weights2(self):
         """Return the 2D weighted adjacency graph without the source and target.
@@ -947,8 +949,9 @@ class L1TV(Base):
         dim = 2
         Nx, Ny = self.u_noise.shape
         weights = {}
-        for nx, ny, dx, dy in itertools.product(range(Nx), range(Ny),
-                                                *([-2, -1, 0, 2, 1], ) * 2):
+        for nx, ny, dx, dy in itertools.product(
+            range(Nx), range(Ny), *([-2, -1, 0, 2, 1],) * 2
+        ):
             tx, ty = nx + dx, ny + dy
             if self.mode == "periodic":
                 tx, ty = tx % Nx, ty % Ny
@@ -975,8 +978,7 @@ class L1TV(Base):
         cols = [ind(*_k[1]) for _k in weights]
         vals = list(weights.values())
 
-        return sp.sparse.csr_matrix((vals, (rows, cols)),
-                                    shape=(Nx * Ny + 2, ) * 2)
+        return sp.sparse.csr_matrix((vals, (rows, cols)), shape=(Nx * Ny + 2,) * 2)
 
     def compute_connections(self, u, threshold=1):
         """Return the adjacency graph connecting the source and target.
@@ -1000,8 +1002,7 @@ class L1TV(Base):
         rows = np.concatenate([s_rows, t_rows])
         cols = np.concatenate([s_cols, t_cols])
         vals = np.ones(len(rows))
-        C = sp.sparse.csr_matrix((vals, (rows, cols)),
-                                 shape=(len(u) + 2, ) * 2)
+        C = sp.sparse.csr_matrix((vals, (rows, cols)), shape=(len(u) + 2,) * 2)
         return C + C.T
 
     def denoise(self, laminv2):
@@ -1065,9 +1066,9 @@ class NonLocalMeans(Base):
         self.rng = np.random.default_rng(seed=self.seed)
         if self.image is not None:
             self.u_exact = self.image.get_data(sigma=0, normalize=True)
-            self.u_noise = self.image.get_data(sigma=self.sigma,
-                                               normalize=True,
-                                               rng=self.rng)
+            self.u_noise = self.image.get_data(
+                sigma=self.sigma, normalize=True, rng=self.rng
+            )
 
     def pad(self, u=None):
         """Return the padded array.  This implements the boundaries."""
@@ -1083,7 +1084,7 @@ class NonLocalMeans(Base):
         u_ = np.zeros_like(u, shape=(Nx_, Ny_))
         ix0, iy0 = dx // 2, dy // 2
         ix1, iy1 = (dx - 1) // 2, (dy - 1) // 2
-        u_[ix0:ix0 + Nx, iy0:iy0 + Ny] = u
+        u_[ix0 : ix0 + Nx, iy0 : iy0 + Ny] = u
         if self.mode == "constant":
             return u_
         if self.mode in {"wrap", "periodic"}:
@@ -1100,16 +1101,16 @@ class NonLocalMeans(Base):
             return u_
         if self.mode == "reflect":
             u_[:ix0, :] = u_[ix0:, :][:ix0, :][::-1, :]
-            u_[-ix1:, :] = u_[Nx + 1::-1, :][:ix1, :]
+            u_[-ix1:, :] = u_[Nx + 1 :: -1, :][:ix1, :]
             u_[:, :iy0] = u_[:, iy0:][:, :iy0][:, ::-1]
-            u_[:, -iy1:] = u_[:, Ny + 1::-1][:, :iy1]
+            u_[:, -iy1:] = u_[:, Ny + 1 :: -1][:, :iy1]
             return u_
         if self.mode == "mirror":
-            u_[:ix0, :] = u_[ix0 + 1:, :][:ix0, :][::-1, :]
+            u_[:ix0, :] = u_[ix0 + 1 :, :][:ix0, :][::-1, :]
             u_[-ix1:, :] = u_[Nx::-1, :][:ix1, :]
-            u_[:, :iy0] = u_[:, iy0 + 1:][:, :iy0][:, ::-1]
+            u_[:, :iy0] = u_[:, iy0 + 1 :][:, :iy0][:, ::-1]
             u_[:, -iy1:] = u_[:, Ny::-1][:, :iy1]
-            u_[:ix0, :] = u_[ix0 + 1:, :][:ix0, :][::-1, :]
+            u_[:ix0, :] = u_[ix0 + 1 :, :][:ix0, :][::-1, :]
             return u_
         raise ValueError(f"Unsupported {self.mode=}")
 
@@ -1199,8 +1200,8 @@ class NonLocalMeans(Base):
         size = (2, self.dx, self.dy)
         threshold = np.percentile(
             [
-                self.dist(*rng.normal(scale=self.sigma, size=size),
-                          _internal=True)[0] for _N in range(Nsamples)
+                self.dist(*rng.normal(scale=self.sigma, size=size), _internal=True)[0]
+                for _N in range(Nsamples)
             ],
             percentile,
         )
@@ -1212,7 +1213,7 @@ class NonLocalMeans(Base):
             u_ = self.pad(self.u_noise)
         Nx = u_.shape[0] - (self.dx - 1)
         ix, iy = self.ixy(i, Nx=Nx)
-        return u_[ix:ix + self.dx, iy:iy + self.dy]
+        return u_[ix : ix + self.dx, iy : iy + self.dy]
 
     def compute_dists(self, u=None, u_=None):
         """Return the array of (dist, dAB_) pairs: the distances between the patches.
@@ -1235,25 +1236,37 @@ class NonLocalMeans(Base):
 
         Np = Nx * Ny
         if self.symmetric:
-            dists = np.array([[[0, 0]] * (i1 + 1) + [
-                self.dist(
-                    self.get_patch(i0, u_=u_),
-                    self.get_patch(i1, u_=u_),
-                    _internal=True,
-                ) for i0 in range(i1 + 1, Np)
-            ] for i1 in range(Np)])
+            dists = np.array(
+                [
+                    [[0, 0]] * (i1 + 1)
+                    + [
+                        self.dist(
+                            self.get_patch(i0, u_=u_),
+                            self.get_patch(i1, u_=u_),
+                            _internal=True,
+                        )
+                        for i0 in range(i1 + 1, Np)
+                    ]
+                    for i1 in range(Np)
+                ]
+            )
             # Transpose only on the first two indices.  Note that dAB_ changes sign for
             # the transposed entries.
-            dists += np.einsum("ab...->ba...", dists) * np.array([1, -1])[:,
-                                                                          ...]
+            dists += np.einsum("ab...->ba...", dists) * np.array([1, -1])[:, ...]
         else:
-            dists = np.array([[
-                self.dist(
-                    self.get_patch(i0, u_=u_),
-                    self.get_patch(i1, u_=u_),
-                    _internal=True,
-                ) for i0 in range(Np)
-            ] for i1 in range(Np)])
+            dists = np.array(
+                [
+                    [
+                        self.dist(
+                            self.get_patch(i0, u_=u_),
+                            self.get_patch(i1, u_=u_),
+                            _internal=True,
+                        )
+                        for i0 in range(Np)
+                    ]
+                    for i1 in range(Np)
+                ]
+            )
         return dists
 
     def denoise(
@@ -1311,17 +1324,13 @@ class NonLocalMeans(Base):
                 if percentile not in _cache:
                     _cache[percentile] = self.dist(
                         u_exact,
-                        self.denoise(u=u,
-                                     dists=dists,
-                                     u_=u_,
-                                     percentile=percentile),
+                        self.denoise(u=u, dists=dists, u_=u_, percentile=percentile),
                     )
                 return _cache[percentile]
 
-            res = sp.optimize.minimize_scalar(err,
-                                              bracket=(10, 50),
-                                              bounds=(0, 100),
-                                              options=dict(xatol=0.1))
+            res = sp.optimize.minimize_scalar(
+                err, bracket=(10, 50), bounds=(0, 100), options=dict(xatol=0.1)
+            )
             if not res.success:
                 raise ValueError(res.message)
 
@@ -1335,11 +1344,22 @@ class NonLocalMeans(Base):
         Np = Nx * Ny
 
         if self.symmetric:
-            ds = sorted([(dists[i0, i1].tolist(), (i0, i1)) for i1 in range(Np)
-                         for i0 in range(i1 + 1, Np)])
+            ds = sorted(
+                [
+                    (dists[i0, i1].tolist(), (i0, i1))
+                    for i1 in range(Np)
+                    for i0 in range(i1 + 1, Np)
+                ]
+            )
         else:
-            ds = sorted([(dists[i0, i1].tolist(), (i0, i1)) for i1 in range(Np)
-                         for i0 in range(Np) if i0 != i1])
+            ds = sorted(
+                [
+                    (dists[i0, i1].tolist(), (i0, i1))
+                    for i1 in range(Np)
+                    for i0 in range(Np)
+                    if i0 != i1
+                ]
+            )
 
         # Build Graph: keys are nodes, values are lists of neighbours
         if f_weight is None:
@@ -1358,11 +1378,11 @@ class NonLocalMeans(Base):
                 sigma : float
                     Reference distance returned by sigma_weight()
                 """
-                return np.exp(-((d / sigma)**2) / 2)
+                return np.exp(-((d / sigma) ** 2) / 2)
 
         G = {}
         threshold = self.get_threshold(percentile=percentile)
-        for ((d, dAB_), (i0, i1)) in ds:
+        for (d, dAB_), (i0, i1) in ds:
             neighbours = G.setdefault(i0, [])
 
             if d <= threshold or len(neighbours) < Nmin:
@@ -1392,8 +1412,7 @@ class NonLocalMeans(Base):
         u_clean = np.array(u_clean).reshape((Ny, Nx)).T
         if not debug:
             return u_clean
-        DebugResults = namedtuple("DebugResults",
-                                  ["u_clean", "u_", "dists", "G"])
+        DebugResults = namedtuple("DebugResults", ["u_clean", "u_", "dists", "G"])
         return DebugResults(u_clean=u_clean, u_=u_, dists=dists, G=G)
 
 
@@ -1425,9 +1444,9 @@ class CharacteristicGraphs(Base):
         self.V0 = set(list(zip(ix.ravel(), iy.ravel())))  # All vertices
 
         # Get all edges in G0 and corresponding weights.
-        E0 = [
-            (_ixy, 0) for _ixy in zip(ix[:-1, :].ravel(), iy[:-1, :].ravel())
-        ] + [(_ixy, 1) for _ixy in zip(ix[:, :-1].ravel(), iy[:, :-1].ravel())]
+        E0 = [(_ixy, 0) for _ixy in zip(ix[:-1, :].ravel(), iy[:-1, :].ravel())] + [
+            (_ixy, 1) for _ixy in zip(ix[:, :-1].ravel(), iy[:, :-1].ravel())
+        ]
         w0 = np.concatenate([wx.ravel(), wy.ravel()])
 
         self.E0 = set(E0)
@@ -1489,7 +1508,8 @@ class CharacteristicGraphs(Base):
             V.update({va, vb})
             E.add(e)
             edges.set_description(
-                f"{len(V)} of {len(self.V0)}: {len(clusters)} clusters")
+                f"{len(V)} of {len(self.V0)}: {len(clusters)} clusters"
+            )
             if V == self.V0:
                 break
 
@@ -1524,8 +1544,7 @@ class CharacteristicGraphs(Base):
         #    (c) if the edge weight is less than wcut.
         deg1 = [v for v in degs if degs[v] == 1]
         for v in deg1:
-            for _w, e in sorted(
-                (self.weights[_e], _e) for _e in self.get_edges(v)):
+            for _w, e in sorted((self.weights[_e], _e) for _e in self.get_edges(v)):
                 if _w < wcut and e not in E:
                     E.add(e)
                     for _V, _E in clusters:

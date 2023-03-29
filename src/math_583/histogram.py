@@ -17,12 +17,12 @@ def hist_err(
     a,
     histtype="step",
     sigma_bounds=(-1, 1),
-    bins=None,
+    bins=10,
     range=None,
     weights=None,
     density=False,
     errorbar_kw=None,
-    **kw
+    **kw,
 ):
     """Adds errorbars to matplotlib's hist.
 
@@ -55,7 +55,7 @@ def hist_err(
 def histogram_err(
     a,
     sigma_bounds=(-1, 1),
-    bins=None,
+    bins=10,
     range=None,
     weights=None,
     density=False,
@@ -70,11 +70,11 @@ def histogram_err(
         Confidence region to plot expressed in terms of 1D normal sigma percentiles.
     """
     unknown_params = set(inspect.signature(np.histogram).parameters).difference(
-        {"a", "bins", "range", "weights", "density"}
+        {"a", "bins", "range", "weights", "normed", "density"}
     )
     if unknown_params:
         warnings.warn(
-            "Unknown parameters {unknown_params}: Assumptions about histogram may be invalid"
+            f"Unknown parameters {unknown_params}: Assumptions about histogram may be invalid"
         )
 
     assert len(sigma_bounds) == 2

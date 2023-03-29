@@ -36,8 +36,8 @@ def calibrate(
         If False, then return the calibration data (A, c0, c1, ...) evaluated at the
         parameter values a.  If True, then also return the inverse calibration
         ((A, c0, c1, ...), (a_, c0_, c1_, ..._)) as splines where everything is a
-        function of the estimator A_. Note: this requires that the estimator and
-        confidence levels depend monotonically on parameter.
+        function of the estimator A_. Note: this requires that the estimator depends
+        monotonically on the parameter.
 
     Returns
     -------
@@ -72,14 +72,18 @@ def calibrate(
 
     if invert:
         Spline = sp.interpolate.InterpolatedUnivariateSpline
-        if np.all(np.diff(calibration, axis=1) < 0):
+        A = calibration[0]
+        if np.all(np.diff(A) < 0):
             # Reverse order so calibrations are monotonically increasing.
             a = a[::-1]
             calibration = calibration[:, ::-1]
-        if not np.all(np.diff(calibration, axis=1) > 0):
+        if not np.all(np.diff(A) > 0):
             raise NotImplementedError(
-                "Calibration is not Monotonic.  Perhaps try increasing Ns?"
+                "Estimator is not monotonic.  Perhaps try increasing Ns?"
             )
-        splines = [Spline(c, a, ext="raise") for c in calibration]
+
+        # a(A): i.e. the inverse of the estimator.
+        a_A_ = Spline(A, a)
+        splines = [a_A_] + [Spline(a, a_A_(c)) for c in calibration[1:]]
         return calibration, splines
     return calibration
