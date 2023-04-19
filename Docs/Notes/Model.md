@@ -645,3 +645,33 @@ $$P_h(x) = \frac{1}{n}\sum_{i=1}^n k_{x_i}^h(x)$$
 $h$ is then a parameter that adjusts the distribution. If $h$ is too small the resulting function will look like a sum of Dirac delta functions and if $h$ is too big very little detail will show. Often $h \approx \left(\frac{1}{n}\right)^{\frac{1}{5}}$ is chosen. However, adaptive scaling may be used to put more weight near clumps of points.
 
 ![](figures/kernel_density_estimation.png)
+
+### Classifying objects
+
+Suppose that we have some input space $X$ of objects that we would like to classify. Often $X \subseteq \mathbb{R}^d$ consists of feature vectors that describe some object with $d$ real numbers, and a classifying function will then be a map $f: X \to \{0,1\}$. We will assume that every $x \in X$ has correct classification, either 0 or 1.
+
+Consider the special case of $X = [a,b] \subset \mathbb{R}$ and suppose we take $m$ samples from $X$ to get a collection of points $\{x_n, n = 1,..,m\}$ or equivalently partition $[a,b]$ into $m$ subintervals. Then there are $2^m$ possible binary functions that we could define with our samples as its domain or equivalently as histograms whose buckets are our subintervals. For now we will take the latter view, and call this collection of candidate histograms $\mathcal{F}$. We would like to select based on this data a classifying function $\hat{f}$ that will best match not only our sample but the whole interval $X$ as well.
+
+Analogusly, perhaps we have a collection of pictures and we would like to determine if each picture has a duck in it or not. This is our domain $X$. So we take out $m$ pictures and classify each by hand as having a duck in them or not, and then from this we construct a function that can hopefully do a good job at classifying the rest of the pictures for us.
+
+Since we have access to the true classification of our samples, we know that any good function should at least correctly classify them.
+
+Let $f$ be the true classification of each point in $X$. Then we define the risk $R$ of a classifier $\hat{f}_n$ to be:
+
+$$R(\hat{f}_n) = \int_X |\hat{f}_n-f|d\rho$$
+
+And with $\hat{f}_n$ and $f$ being probability distributions, the risk is the likelihood of making an error given a random point on the interval. The hat notation and subscript $n$ is to make the dependence on our sample explicit.
+
+Ideally we would like to find a function that minimizies the risk, $\min_{f \in \mathcal{F}} R(f)$ and in fact with our setup there exists a classifier with zero probability of error - our truth function. Define now the empirical risk by:
+
+$$\hat{R}_n(f) = \frac{1}{n}\sum_{i}|f(x_i)-y_i|$$
+
+Which calculates our error with respect to training data. We are then interested in:
+
+$$P(R(\hat{f}_n) > \varepsilon)$$
+
+Which is the probability of a classifier having a risk of more than $\varepsilon$. Essentially this may be computed by taking all of the possible classifying functions, putting all of those with a risk more than $\varepsilon$ into a big pile and then calculating which fraction that represents. Note however that this depends on the samples chosen. If $\hat{f}_n = \argmin_{f \in \mathcal{F}}\hat{R}_n(f)$ we can assert the following bound:
+
+$$P(R(\hat{f}_n) > \varepsilon) \leq |\mathcal{F}| e^{-m\varepsilon}$$
+
+Which for a fixed sample we can make as small as we like by taking more and more samples or dividing into smaller and smaller bins. 
