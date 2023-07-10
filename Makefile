@@ -13,7 +13,6 @@ GET_RESOURCES = git clone git@gitlab.com:wsu-courses/iscimath-583-learning-from-
 USE_ANACONDA2020 ?= true
 
 
-
 # ------- Tools -------
 ifdef ANACONDA2020
   # If this is defined, we assume we are on CoCalc
@@ -45,9 +44,12 @@ ifdef CONDA_SUBDIR
 endif
 
 ENV ?= math-583
-ENV_PATH ?= $(abspath envs/$(ENV))
+ENVS ?= envs
+ENV_PATH ?= $(abspath $(ENVS)/$(ENV))
 ACTIVATE_PROJECT ?= $(ACTIVATE) $(ENV_PATH)
 JUPYTEXT ?= $(ANACONDA_PROJECT) run jupytext
+
+TOOLS_ENV ?= $(ENVS)/tools
 
 # ------- Top-level targets  -------
 # Default prints a help message
@@ -61,18 +63,33 @@ usage:
 	@make html
 	tar -s "|$(DOCS)/_build/html|583-Docs|g" -zcvf $@ $(DOCS)/_build/html
 
-init:  _ext/Resources  ~/.local/bin/mmf_setup anaconda-project.yaml $(MINICONDA)
-	$(AP_PRE) $(ANACONDA_PROJECT) prepare
-ifdef CONDA_SUBDIR
-	$(ACTIVATE_PROJECT) && conda config --env --set subdir $(CONDA_SUBDIR)
-endif
-	$(AP_PRE) $(ANACONDA_PROJECT) run init  # Custom command: see anaconda-project.yaml
+BIN ?= .local/bin
+export PATH := $(BIN):$(TOOLS_ENV)/bin:$(PATH)
+
+export MAMBA_ROOT_PREFIX ?= .local/micromamba
+MICROMAMBA = $(BIN)/micromamba
+
+# The following allows micromamba to be run, even if the shell is not initialized.
+_MICROMAMBA = eval "$$($(MICROMAMBA) shell hook --shell=$(notdir $(SHELL)))" && micromamba
+_RUN = $(_MICROMAMBA) run -p $(ENV_PATH)
+
+tools: $(MICROMAMBA) $(TOOLS_ENV)
+
+info: tools
+	$(_MICROMAMBA) info
+
+shell: $(ENV_PATH) tools
+	$(_RUN) bash --init-file .init-file.bash
+
+init: _ext/Resources tools
 ifdef ANACONDA2020
 	if ! grep -Fq '$(ACTIVATE_PROJECT)' ~/.bash_aliases; then \
 	  echo '$(ACTIVATE_PROJECT)' >> ~/.bash_aliases; \
 	fi
 	@make sync
 endif
+
+.PHONY: tools info shell init
 
 # Jupytext
 sync:
@@ -85,6 +102,7 @@ sync:
 
 clean:
 	-find . -name "__pycache__" -exec $(RM) -r {} +
+	-find . -name "*.py[odc]" -delete
 	-find . -name ".ipynb_checkpoints" -exec $(RM) -r {} +
 	-$(RM) -r _htmlcov .coverage .pytest_cache
 	-$(ACTIVATE) root && conda clean --all -y
@@ -107,11 +125,11 @@ html:
 # However, I do not know a good way to pass these to sphinx-autobuild yet.
 ALWAYS_REBUILD ?= $(shell find $(DOCS) -type f -name "*.md" -exec grep -l '```{include}' {} + )
 
-doc-server:
+doc-server: $(ENV_PATH)
 ifdef ANACONDA2020
 	$(AP_PRE) $(ANACONDA_PROJECT) run sphinx-autobuild --re-ignore '_build|_generated' $(DOCS) $(DOCS)/_build/html --host 0.0.0.0 --port 8000
 else
-	$(AP_PRE) $(ANACONDA_PROJECT) run sphinx-autobuild --re-ignore '_build|_generated' $(DOCS) $(DOCS)/_build/html
+	$(_RUN) sphinx-autobuild --re-ignore '_build|_generated' $(DOCS) $(DOCS)/_build/html
 endif
 
 # ------- Experimental targets  -----
@@ -133,6 +151,12 @@ hg-amend-cookiecutter:
 .PHONY: hg-update-cookiecutter, hg-amend-cookiecutter
 
 # ------- Auxilliary targets  -------
+$(MICROMAMBA):
+	"$(SHELL)" <(curl -L micro.mamba.pm/install.sh | \
+	                     sed "s:~/.local/bin:$(dir $@):g" | \
+	                     sed "s:\[ -t 0 \]:false:g" | \
+	                     sed 's:YES="yes":YES="no":g')
+
 MINICONDA_SH = https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
 MINICONDA_HASH = 1ea2f885b4dbc3098662845560bc64271eb17085387a70c2ba3f29fff6f8d52f
 
@@ -148,7 +172,6 @@ $(MINICONDA):
 	$@/bin/conda install --override-channels --channel conda-forge -y mamba
 	$@/bin/conda clean -y --all
 
-
 # Special target on CoCalc to prevent re-installing mmf_setup.
 ~/.local/bin/mmf_setup:
 ifdef ANACONDA2020
@@ -163,6 +186,12 @@ _ext/Resources:
 	  echo "$$RESOURCES_ERROR_MESSAGE"; \
 	fi
 
+
+$(TOOLS_ENV): environment.tools.yaml
+	$(_MICROMAMBA) create -yp $@ -f $<
+
+$(ENV_PATH): environment.yaml
+	$(_MICROMAMBA) create -yp $@ -f $<
 
 $(DOCS)/environment.yaml: anaconda-project.yaml Makefile
 	$(AP_PRE) $(ANACONDA_PROJECT) run export 1> $@

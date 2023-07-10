@@ -192,7 +192,6 @@ from sphinx_togglebutton import Toggle
 
 
 class SolutionAdmonition(BaseAdmonition):
-
     required_arguments = 0
     optional_arguments = 1
     # final_argument_whitespace = True
@@ -289,7 +288,7 @@ def my_init(app):
         )
     else:
         print("Not On RTD!")
-        subprocess.check_call(["anaconda-project", "run", "init"])
+        subprocess.check_call(["make", "init"])
 
     mathjax_offline = False
     # mathjax_offline = True

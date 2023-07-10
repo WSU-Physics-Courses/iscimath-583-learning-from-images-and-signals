@@ -5,6 +5,7 @@ syntax:glob
 .coverage
 .pytest_cache/
 .nox/
+.local/
 _data/
 _ext/
 _trash/
