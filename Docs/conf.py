@@ -288,7 +288,7 @@ def my_init(app):
         )
     else:
         print("Not On RTD!")
-        subprocess.check_call(["make", "init"])
+        subprocess.check_call(["make", "-C", "..", "init"])
 
     mathjax_offline = False
     # mathjax_offline = True

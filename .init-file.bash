@@ -6,7 +6,11 @@ eval "$(micromamba shell hook --shell=bash)"
 
 # Assume that this is set by running anaconda-project run shell
 CONDA_ENV="${CONDA_PREFIX}"
-micromamba deactivate
+
+# [[ -v CONDA_PREFIX ]] is better, but needs bash > 4.2... not on Mac OS X.
+while [[ ! -z ${CONDA_PREFIX+x} ]]; do 
+    micromamba deactivate
+done
 micromamba activate "${CONDA_ENV}"
 #alias ap="anaconda-project"
 #alias apr="anaconda-project run"

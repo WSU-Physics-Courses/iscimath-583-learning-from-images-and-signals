@@ -20,32 +20,32 @@ sphinx:
 # As of 6 April 2022, this fails with
 # Command killed due to timeout or excessive memory consumption
 
-#build:
-#  os: ubuntu-20.04
-#  tools:
-#    python: "mambaforge-4.10"
+build:
+  os: ubuntu-22.04
+  tools:
+    python: "mambaforge-4.10"
 
 ######################################################################
 # Option 2: Use conda
-build:
-  # Needed for now instead for python 3.9
-  # https://github.com/readthedocs/readthedocs.org/issues/7554
-  image: testing
-  apt_packages:
-    - libcairo2-dev
-    - libpango1.0-dev
-    - ffmpeg
+# build:
+#   # Needed for now instead for python 3.9
+#   # https://github.com/readthedocs/readthedocs.org/issues/7554
+#   image: testing
+#   apt_packages:
+#     - libcairo2-dev
+#     - libpango1.0-dev
+#     - ffmpeg
 
 # Optionally declare the Python requirements required to build your docs
 #
 # Don't do this here if you use the "mambaforge-4.10" option above or you will get
 # errors like
 # Problem in your project's configuration. Invalid "python.version": expected one of ..., got 3.9
-python:
-   version: "3.9"
+# python:
+#    version: "3.9"
 
 # Use conda
 # https://docs.readthedocs.io/en/stable/faq.html#can-i-use-anaconda-project-and-anaconda-project-yml
 conda:
-  environment: anaconda-project.yaml
+  environment: environment.yaml
 

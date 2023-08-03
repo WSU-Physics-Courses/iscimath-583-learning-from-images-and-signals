@@ -1,6 +1,8 @@
-# Modelled after
+# Modeled after
 # https://github.com/simoninireland/introduction-to-epidemics/blob/master/Makefile
 SHELL = /bin/bash
+_SHELL = $(notdir $(SHELL))
+
 DOCS ?= Docs
 
 COOKIECUTTER_URL ?= git+https://gitlab.com/forbes-group/cookiecutters.git
@@ -11,7 +13,6 @@ GET_RESOURCES = git clone git@gitlab.com:wsu-courses/iscimath-583-learning-from-
 
 # Currently, even the new method uses too much memory...
 USE_ANACONDA2020 ?= true
-
 
 # ------- Tools -------
 ifdef ANACONDA2020
@@ -75,13 +76,15 @@ _RUN = $(_MICROMAMBA) run -p $(ENV_PATH)
 
 tools: $(MICROMAMBA) $(TOOLS_ENV)
 
-info: tools
+info:
 	$(_MICROMAMBA) info
 
-shell: $(ENV_PATH) tools
-	$(_RUN) bash --init-file .init-file.bash
+SHELL_INIT_FILE ?= .init-file.$(_SHELL)
+shell: $(ENV_PATH)
+	$(_RUN) $(SHELL) --init-file $(SHELL_INIT_FILE)
 
-init: _ext/Resources tools
+init: _ext/Resources $(ENV_PATH)
+	$(_RUN) python3 -m ipykernel install --user --name math-583 --display-name "Python 3 (math-583)"
 ifdef ANACONDA2020
 	if ! grep -Fq '$(ACTIVATE_PROJECT)' ~/.bash_aliases; then \
 	  echo '$(ACTIVATE_PROJECT)' >> ~/.bash_aliases; \
@@ -205,57 +208,28 @@ define HELP_MESSAGE
 This Makefile provides several tools to help initialize the project.  It is primarly designed
 to help get a CoCalc project up an runnning, but should work on other platforms.
 
-Variables:
-   ANACONDA2020: (= "$(ANACONDA2020)")
-                     If defined, then we assume we are on CoCalc and use this to activate
-                     the conda base envrionment. Otherwise, you must make sure that the ACTIVATE
-                     command works properly.
-   ACTIVATE: (= "$(ACTIVATE)")
-                     Command to activate a conda environment as `$$(ACTIVATE) <env name>`
-                     Defaults to `conda activate`.
-   ANACONDA_PROJECT: (= "$(ANACONDA_PROJECT)")
-                     Command to run the `anaconda-project` command.  If you need to first
-                     activate an environment (as on CoCalc), then this should do that.
-                     Defaults to `anaconda-project`.
-   AP_PRE: (= "$(AP_PRE)")
-                     Pre-commands (like setting `CONDA_EXEC=mamba`) to be run before commands
-                     executed with `$(ANACONDA_PROJECT)`.
-   DOCS: (= "$(DOCS)")
-                     Name of the documentation directory.
-                     Defaults to `Docs`.
-   ENV: (= "$(ENV)")
-                     Name of the conda environment user by the project.
-                     (Customizations have not been tested.)
-                     Defaults to `math-583`.
-   ENV_PATH: (= "$(ENV_PATH)")
-                     Path to the conda environment user by the project.
-                     (Customizations have not been tested.)
-                     Defaults to `envs/$$(ENV)`.
-   ACTIVATE_PROJECT: (= "$(ACTIVATE_PROJECT)")
-                     Command to activate the project environment in the shell.
-                     Defaults to `$$(ACTIVATE)  $$(ENV)`.
-
-Experimental Variables: (These features are risky or have not been full tested.)
-   COOKIECUTTER_URL: (= "$(COOKIECUTTER_URL)")
-                     Location of source project for cookiecutter skeletons.  Usually this is
-                     `git+https://gitlab.com/forbes-group/cookiecutters.git` but can point to
-                     a local directory if you have a clone or are testing changes.
-   COOKIECUTTER: (= "$(COOKIECUTTER)")
-                     Cookiecutter command, including `--directory` if needed.
-   COOKIECUTTER_YAML: (= "$(COOKIECUTTER_YAML)")
-                     Local cookiecutter yaml file for the project.
+Note: several tools like `micromamba` are needed to complete the actions required here
+(see `environment.tools.yaml` for details).  These are often installed at a system
+level, but if not, you can install them here in `$(BIN)` by running `make tools`.  This
+is not done by default.
 
 Initialization:
+   make tools        Install the required tools in `$(BIN)`.  You might choose to
+                     install these at a system level instead.
    make init         Initialize the environment and kernel.  On CoCalc we do specific things
                      like install mmf-setup, and activate the environment in ~/.bash_aliases.
                      This is done by `make init` if ANACONDA2020 is defined.
+   make shell        Launch a shell with everything initialized and ready to work.
+                     Similar to `poetry shell`, this runs a new instance of the shell,
+                     rather than activating an environment.  To exit, simply kill the
+                     shell (Ctrl-D).
 
 Testing:
    make test         Runs the general tests.
 
 Maintenance:
    make clean        Call conda clean --all: saves disk space.
-   make reallyclean  delete the environments and kernel as well.
+   make reallyclean  Delete the environments and kernel as well.
    make hg-update-cookiecutter (EXPERIMENTAL)
                      Update the base branch with any pushed cookiecutter updates.  Note: this
                      assumes several things, including that you have a `default` and
@@ -269,7 +243,40 @@ Documentation:
    make html         Build the html documentation in `$$(DOCS)/_build/html`
    make doc-server   Build the html documentation server on http://localhost:8000
                      Uses Sphinx autobuild
-   583-Docs.tgz  Package documentation for upload to Canvas.
+   583-Docs.tgz      Package documentation for upload to Canvas.
+
+Variables:
+   ANACONDA2020: (= "$(ANACONDA2020)")
+                     If defined, then we assume we are on CoCalc.  This is not the
+                     latest version, but exists for backwards compatibility.
+   ACTIVATE: (= "$(ACTIVATE)")
+                     Command to activate a conda environment as `$$(ACTIVATE) <env name>`
+                     Defaults to `micromamba activate`.
+   BIN: (= "$(BIN)")
+                     Directory where tools like `micromamba` will be installed by the
+                     `make tools` command.
+   DOCS: (= "$(DOCS)")
+                     Name of the documentation directory.
+                     Defaults to `Docs`.
+   ENV: (= "$(ENV)")
+                     Name of the conda environment user by the project.
+                     (Customizations have not been tested.)
+                     Defaults to `math-583`.
+   ENV_PATH: (= "$(ENV_PATH)")
+                     Path to the conda environment user by the project.
+                     (Customizations have not been tested.)
+                     Defaults to `envs/$$(ENV)`.
+
+Experimental Variables: (These features are risky or have not been full tested.)
+   COOKIECUTTER_URL: (= "$(COOKIECUTTER_URL)")
+                     Location of source project for cookiecutter skeletons.  Usually this is
+                     `git+https://gitlab.com/forbes-group/cookiecutters.git` but can point to
+                     a local directory if you have a clone or are testing changes.
+   COOKIECUTTER: (= "$(COOKIECUTTER)")
+                     Cookiecutter command, including `--directory` if needed.
+   COOKIECUTTER_YAML: (= "$(COOKIECUTTER_YAML)")
+                     Local cookiecutter yaml file for the project.
+
 endef
 export HELP_MESSAGE
 
