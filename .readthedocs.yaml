@@ -17,15 +17,20 @@ sphinx:
 # Option 1: Use mamba
 # https://github.com/readthedocs/readthedocs.org/issues/8424
 # https://docs.readthedocs.io/en/stable/guides/conda.html#making-builds-faster-with-mamba
-# As of 6 April 2022, this fails with
 # Command killed due to timeout or excessive memory consumption
 
 build:
   os: ubuntu-22.04
   tools:
-    python: "3" # "mambaforge-4.10"
-  commands:
-    - make rtd
+    python: "mambaforge-4.10"
+  jobs:
+    post_create_environment:
+      - python3 -m ipykernel install --user --name math-583
+
+# Use mamba
+# https://docs.readthedocs.io/en/stable/faq.html#can-i-use-anaconda-project-and-anaconda-project-yml
+conda:
+  environment: environment.yaml
 
 ######################################################################
 # Option 2: Use conda
@@ -46,8 +51,4 @@ build:
 # python:
 #    version: "3.9"
 
-# Use conda
-# https://docs.readthedocs.io/en/stable/faq.html#can-i-use-anaconda-project-and-anaconda-project-yml
-conda:
-  environment: environment.yaml
 

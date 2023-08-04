@@ -76,16 +76,6 @@ _RUN = $(_MICROMAMBA) run -p $(ENV_PATH)
 
 tools: $(MICROMAMBA) $(TOOLS_ENV)
 
-#rtd: environment.yaml $(MICROMAMBA) $(ENV_PATH)
-#	$(_MICROMAMBA) create -y --name rtd -f $<
-#	$(_RUN_RTD) python3 -m ipykernel install --user --name math-583 --display-name "Python 3 (math-583)"
-
-rtd: environment.yaml $(MICROMAMBA) $(ENV_PATH)
-	$(_RUN) python3 -m ipykernel install --user --name math-583 --display-name "Python 3 (math-583)"
-	$(_RUN) make -C $(DOCS) html
-	mkdir -p $(READTHEDOCS_OUTPUT)
-	mv $(DOCS)/_build/html $(READTHEDOCS_OUTPUT)
-
 info:
 	$(_MICROMAMBA) info
 
@@ -102,7 +92,7 @@ ifdef ANACONDA2020
 	@make sync
 endif
 
-.PHONY: tools rtd info shell init
+.PHONY: tools info shell init
 
 # Jupytext
 sync:
