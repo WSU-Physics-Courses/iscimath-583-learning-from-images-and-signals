@@ -273,6 +273,8 @@ def my_init(app):
     the kernel from there.
     """
     if on_rtd:
+        pass
+        """
         subprocess.check_call(
             [
                 "python3",
@@ -286,6 +288,7 @@ def my_init(app):
                 "Python 3 (math-583)",
             ]
         )
+        """
     else:
         print("Not On RTD!")
         subprocess.check_call(["make", "-C", "..", "init"])
